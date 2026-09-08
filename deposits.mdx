@@ -1,0 +1,211 @@
+---
+title: "Deposits"
+---
+
+# Making a Deposit
+
+A deposit allows you to collect funds from a customer using one of the supported payment methods, such as Mobile Money, Bank Transfer, or Stablecoins.
+
+The typical deposit flow consists of four steps:
+
+1. Create a deposit.
+2. Ask the customer to authorize the payment.
+3. Receive a webhook notification.
+4. Verify the final transaction status.
+
+---
+
+## Deposit Flow
+
+```text
+Your Application
+       │
+       │ Create Deposit
+       ▼
+KryptaPay API
+       │
+       │ Sends request to provider
+       ▼
+Payment Provider
+       │
+       │ Customer authorizes payment
+       ▼
+Provider processes payment
+       │
+       ▼
+Webhook Notification
+       │
+       ▼
+Your Backend
+       │
+       │ Verify transaction
+       ▼
+Complete Order
+```
+
+---
+
+## Step 1: Create a Deposit
+
+Send a request to create a new deposit.
+
+```http
+POST /v1/payins/checkout
+Authorization: Bearer YOUR_API_KEY
+Content-Type: application/json
+Idempotency-Key: 9bdf22c8-d1dc-4bcb-9f88-ef26f95f8656
+```
+
+Request body:
+
+```json
+{
+  "amount": "300",
+  "currency": "XOF",
+  "network": "MTN_BJ",
+  "customer": {
+    "fullName": "John Doe",
+    "msisdn": "0197000000",
+    "email": "johndoe@example.com"
+  },
+  "redirectUrl": "https://example.com",
+  "expiresInSec": 60
+}
+```
+
+---
+
+## Successful Response
+
+```json
+{
+  "ok": true,
+  "data": {
+    "reference": "tx...",
+    "status": "PENDING",
+    "amount": "300",
+    "currency": "XOF",
+    "checkoutUrl": "...",
+    "checkoutToken": "sbx...",
+    "expiresInSec": 60,
+    "otpRequired": false,
+    "otpInstructions": "..."
+  }
+}
+```
+
+<Info>
+  A successful response indicates that the deposit request has been accepted. It does not mean the customer has completed the payment.
+</Info>
+
+---
+
+## Step 2: Customer Authorization
+
+Depending on the payment provider, the customer may need to:
+
+- Enter a Mobile Money PIN.
+- Approve the payment in their wallet application.
+- Complete a bank transfer.
+- Send a stablecoin transfer.
+- Complete another provider-specific authorization step.
+
+During this time, the transaction remains in the `pending` state.
+
+---
+
+## Step 3: Receive a Webhook
+
+Once the provider finishes processing the payment, KryptaPay sends an event to your webhook endpoint.
+
+Example:
+
+```json
+{
+  "event_id": "evt_...",
+  "event_type": "PAYIN_CREATED",
+  "created_at": "...",
+  "data": {
+    "transaction_id": "tx_...",
+    "reference": "...",
+    "amount": "300",
+    "currency": "XOF",
+    "network": "MTN_BJ",
+    "status": "COMPLETED"
+  }
+}
+```
+
+<Warning>
+  Always verify webhook signatures before processing events.
+</Warning>
+
+---
+
+## Step 4: Verify the Deposit
+
+Never rely solely on the webhook.
+
+Retrieve the deposit to confirm its final status.
+
+```http
+GET /v1/deposits/...
+Authorization: Bearer YOUR_API_KEY
+```
+
+Example response:
+
+```json
+{
+    "reference": "...",
+    "amount": "300",
+    "checkoutUrl": "...",
+    "checkoutToken": "...",
+    "expiresInSec": 60
+  }
+```
+
+---
+
+## Deposit Statuses
+
+| Status | Description |
+| --- | --- |
+| `PENDING` | The deposit has been created and is awaiting customer authorization. |
+| `PROCESSING` | The payment provider is processing the transaction. |
+| `COMPLETED` | The funds have been successfully collected. |
+| `FAILED` | The deposit could not be completed. |
+| `CANCELLED` | The customer cancelled the payment. |
+| `REFUNDED` | The funds have been refunded. |
+
+---
+
+## Best Practices
+
+<Check>
+  - Generate a unique `Idempotency-Key` for every deposit request.
+  - Store the KryptaPay transaction ID.
+  - Use your own unique merchant reference.
+  - Verify webhook signatures.
+  - Retrieve the deposit before fulfilling an order.
+  - Implement retry logic for temporary failures.
+  - Log the `X-Request-Id` response header for troubleshooting.
+</Check>
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Payouts" icon="inbox-arrow-up" href="/payouts">
+    Learn how to make a withdrawal.
+  </Card>
+
+  <Card title="Webhooks" icon="code" href="/webhooks">
+    Learn how to set up webhook to get notified in real time.
+  </Card>
+
+  <Card title="Verification and Compliance" icon="address-card" href="/compliance">
+    Learn how KryptaPay uses KYB and KYC verification to provide secure, transparent, and trusted payment services.
+  </Card>
+</CardGroup>

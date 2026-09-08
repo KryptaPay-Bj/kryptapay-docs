@@ -1,0 +1,125 @@
+---
+title: "Using The API"
+---
+
+Now that you have an account in our sandbox, let’s look at how to start integrating.
+
+## Authentication
+
+Authenticate every request using your API key.
+
+```http
+Authorization: Bearer YOUR_API_KEY
+```
+
+Example request:
+
+```bash
+curl --request GET \
+  --url https://staging.api.krypta-pay.com/v1/me \
+  --header "Authorization: Bearer YOUR_API_KEY"
+```
+
+## Your First Payment
+
+Create a payment by sending a request to the Payments endpoint.
+
+```bash
+curl --request POST \
+  --url https://staging.api.krypta-pay.com/v1/payins/checkout \
+  --header "Authorization: Bearer YOUR_API_KEY" \
+  --header "Content-Type: application/json" \
+  --data '{
+  "amount": "300",
+  "currency": "XOF",
+  "network": "MTN_BJ",
+  "customer": {
+    "fullName": "...",
+    "msisdn": "0197000000",
+    "email": "..."
+  },
+  "redirectUrl": "https://example.com",
+  "expiresInSec": 60
+}'
+```
+
+Example response:
+
+```json
+{"ok":true,"data":{"reference":"tx_...","status":"PENDING","amount":"300","currency":"XOF","checkoutUrl": "...","checkoutToken":"sbx_...","expiresInSec":60}}
+```
+
+## Payment Lifecycle
+
+A typical payment follows this flow:
+
+```text
+Create Payment
+       │
+       ▼
+Customer Authorizes Payment
+       │
+       ▼
+Provider Processes Transaction
+       │
+       ▼
+Webhook Sent
+       │
+       ▼
+Verify Payment Status
+       │
+       ▼
+Fulfill Order
+```
+
+## Webhooks
+
+Payment processing is asynchronous.
+
+Configure a webhook endpoint to receive notifications whenever:
+
+- A payment succeeds.
+- A payment fails.
+- A payout completes.
+- A refund is processed.
+- A chargeback is created.
+
+Always verify webhook signatures before processing events.
+
+## Idempotency
+
+Use an idempotency key when creating payments or payouts to safely retry failed requests without creating duplicates.
+
+```http
+Idempotency-Key: 4b17ddc6-4d7f-4d3e-a7d5-62e3c7f2d18d
+```
+
+We recommend generating a new UUID for every unique operation.
+
+## Rate Limits
+
+To ensure platform stability, requests are rate limited.
+
+If the rate limit is exceeded, the API returns:
+
+```http
+HTTP/1.1 429 Too Many Requests
+```
+
+Use the response headers to determine your remaining quota and when the limit resets.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="API reference" icon="book" href="/api-reference">
+    Find out how to integrate to the API to get paid, pay and manage wallets.
+  </Card>
+
+  <Card title="Testing" icon="arrows-rotate" href="/testing">
+    Learn about error handling when using the API.
+  </Card>
+
+  <Card title="Going live" icon="globe-pointer" href="/going-live">
+    Things to set to move from your sandbox account to live payments.
+  </Card>
+</CardGroup>

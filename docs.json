@@ -1,0 +1,98 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "almond",
+  "name": "KryptaPay API",
+  "colors": {
+    "primary": "#0E0099",
+    "light": "#3a2ec1",
+    "dark": "#03001e"
+  },
+  "favicon": {
+    "light": "/images/logo.png",
+    "dark": "/images/logo.png"
+  },
+  "navigation": {
+    "pages": [
+      {
+        "group": "Getting Started",
+        "pages": [
+          "index",
+          "quickstart"
+        ]
+      }
+    ],
+    "tabs": [
+      {
+        "tab": "API Docs",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "index",
+              "getting-started",
+              "using-the-api",
+              "testing",
+              "going-live"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "core-concepts",
+              "providers",
+              "deposits",
+              "payouts",
+              "webhooks",
+              "compliance"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "openapi": "openapi.json"
+      }
+    ]
+  },
+  "logo": {
+    "light": "/images/logo.png",
+    "dark": "/images/logo.png"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Support",
+        "href": "mailto:support@krypta-pay.com"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Dashboard",
+      "href": "https://dashboard.krypta-pay.com/app/dashboard"
+    }
+  },
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "perplexity",
+      "mcp",
+      "cursor",
+      "vscode"
+    ]
+  },
+  "description": "KryptaPay B2B API enables you to collect via Mobile Money, pay by SEPA, manage stablecoins covering many markets and currencies.",
+  "markdown": {
+    "schema": true
+  },
+  "api": {
+    "openapi": "openapi.json"
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/KryptaPay"
+    }
+  }
+}

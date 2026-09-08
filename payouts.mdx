@@ -1,0 +1,247 @@
+---
+title: "Payouts"
+---
+
+# Making a Payout
+
+A payout allows you to transfer funds from your KryptaPay account to a recipient using one of the supported payment methods, such as Mobile Money, Bank Transfer, or Stablecoins.
+
+The typical payout flow consists of four steps:
+
+1. Create a payout.
+2. KryptaPay validates and processes the request.
+3. Receive a webhook notification.
+4. Verify the final transaction status.
+
+---
+
+## Payout Flow
+
+```text
+Your Application
+       │
+       │ Create Payout
+       ▼
+KryptaPay API
+       │
+       │ Validate request
+       ▼
+Payment Provider
+       │
+       │ Send funds
+       ▼
+Recipient receives funds
+       │
+       ▼
+Webhook Notification
+       │
+       ▼
+Your Backend
+       │
+       │ Verify transaction
+       ▼
+Update Business Records
+```
+
+---
+
+## Step 1: Create a Payout
+
+Send a request to create a new payout.
+
+```http
+POST /v1/payouts
+Authorization: Bearer YOUR_API_KEY
+Content-Type: application/json
+Idempotency-Key: 93bbdcb4-c63d-4af9-b630-9af9cc2d56d7
+```
+
+Request body:
+
+```json
+{
+  "amount": "300",
+  "network": "MTN_BJ",
+  "recipient": {
+    "msisdn": "0197000000",
+    "iban": "...",
+    "address": "...",
+    "fullName": "John Doe",
+    "customerId": "...",
+    "bankName": "...",
+    "bankId": "...",
+    "accountNumber": "..."
+  },
+  "description": "...",
+  "category": "...",
+  "counterpartyId": "..."
+}
+```
+
+---
+
+## Successful Response
+
+```json
+{
+  "ok": true,
+  "data": {
+    "id": "...",
+    "reference": "...",
+    "amount": "300",
+    "fee": "...",
+    "description": "...",
+    "recipient": {
+      "msisdn": "0197000000",
+      "iban": "...",
+      "address": "...",
+      "chain": "ETH"
+    },
+    "failureReason": "...",
+    "initiatedAt": "...",
+    "settledAt": "...",
+    "failedAt": "...",
+    "idempotencyKey": "93bbdcb4-c63d-4af9-b630-9af9cc2d56d7",
+    "approvedAt": "...",
+    "autoExecuted": true,
+    "frozen": false
+  }
+}
+```
+
+<Info>
+  A successful response indicates that the payout request has been accepted for processing. It does not guarantee that the recipient has already received the funds.
+</Info>
+
+---
+
+## Step 2: Processing
+
+After the payout is created, KryptaPay validates:
+
+- Your available account balance.
+- Recipient information.
+- Provider availability.
+- Transaction limits.
+- Compliance and fraud checks.
+
+If validation succeeds, the payout is submitted to the selected payment provider.
+
+---
+
+## Step 3: Receive a Webhook
+
+Once processing is complete, KryptaPay sends a webhook to your configured endpoint.
+
+Example:
+
+```json
+{
+  "event": "PAYOUT_COMPLETED",
+  "data": {
+    "id": "tx_...",
+    "reference": "...",
+    "status": "successful",
+    "amount": 300,
+    "currency": "XOF"
+  }
+}
+```
+
+<Warning>
+  Always verify webhook signatures before processing webhook events.
+</Warning>
+
+---
+
+## Step 4: Verify the Payout
+
+Before marking a payout as complete in your system, retrieve its latest status.
+
+```http
+GET /v1/payouts/...
+Authorization: Bearer YOUR_API_KEY
+```
+
+Example response:
+
+```json
+{
+    "id": "...",
+    "status": "PENDING",
+    "reference": "...",
+    "amount": "300",
+    "fee": "...",
+    "description": "...",
+    "recipient": {
+      "msisdn": "0197000000",
+      "iban": "...",
+      "address": "..."
+    },
+    "providerRef": "...",
+    "failureReason": "...",
+    "initiatedAt": "...",
+    "settledAt": "...",
+    "failedAt": "...",
+    "idempotencyKey": "93bbdcb4-c63d-4af9-b630-9af9cc2d56d7",
+    "approvedAt": "...",
+    "autoExecuted": true,
+    "frozen": false
+  }
+```
+
+---
+
+## Payout Statuses
+
+| Status | Description |
+| --- | --- |
+| `PENDING` | The payout request has been accepted and is waiting to be processed. |
+| `PROCESSING` | The payment provider is processing the transfer. |
+| `COMPLETED` | The funds have been successfully delivered to the recipient. |
+| `FAILED` | The payout could not be completed. |
+| `CANCELLED` | The payout was cancelled before processing. |
+| `REFUNDED` | The payout was reversed after processing due to provider or compliance requirements. |
+
+---
+
+## Failure Scenarios
+
+A payout may fail for several reasons, including:
+
+- Insufficient merchant balance.
+- Invalid recipient account or phone number.
+- Provider temporarily unavailable.
+- Transaction amount exceeds provider limits.
+- Compliance or fraud checks failed.
+- Recipient account is blocked or inactive.
+
+See the **Transaction Failure Codes** guide for the complete list of failure codes and recommended actions.
+
+---
+
+## Best Practices
+
+<Check>
+  - Generate a unique `Idempotency-Key` for every payout.
+  - Store the KryptaPay payout ID.
+  - Use unique merchant references.
+  - Verify webhook signatures.
+  - Retrieve the payout before updating your records.
+  - Implement retries with exponential backoff for temporary failures.
+  - Log the `X-Request-Id` response header for troubleshooting.
+</Check>
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Webhooks" icon="code" href="/webhooks">
+    Learn how to set up webhook to get notified in real time.
+  </Card>
+
+  <Card title="Verification and Compliance" icon="address-card" href="/compliance">
+    Learn how KryptaPay uses KYB and KYC verification to provide secure, transparent, and trusted payment services.
+  </Card>
+</CardGroup>

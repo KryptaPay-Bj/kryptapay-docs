@@ -1,0 +1,3454 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "KryptaPay API",
+    "description": "API B2B de paiements numériques pour l'Afrique francophone.\n\n## Authentification\nDeux méthodes sont supportées :\n- **Session utilisateur** : JWT signé dans un cookie `kp_token` (HttpOnly, SameSite=Lax) — utilisé par le tableau de bord.\n- **Clé API** : header `Authorization: Bearer kp_<env>_xxx` — utilisé par les intégrations serveur.\n\nLes endpoints sensibles exigent l'une ou l'autre. Les écritures monétaires acceptent un header `Idempotency-Key` pour la dé-duplication.\n\n## Enveloppe de réponse\nToutes les réponses suivent le format `{ ok: boolean, data?: T, error?: { code, message, details? } }`.\n\n## Webhooks sortants\nSignature HMAC SHA-256 dans le header `X-KryptaPay-Signature`. Le secret est défini à la création de l'endpoint.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "KryptaPay Support",
+      "email": "support@kryptapay.test",
+      "url": "https://kryptapay.test"
+    },
+    "license": { "name": "Proprietary" }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT utilisateur ou clé API `kp_<env>_xxx`"
+      },
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "kp_token",
+        "description": "Session signée (front Next.js)"
+      }
+    },
+    "schemas": {}
+  },
+  "paths": {
+    "/v1/payouts/": {
+      "post": {
+        "summary": "Create a payout",
+        "tags": ["payouts"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "string",
+                    "pattern": "^\\d+(\\.\\d{1,8})?$",
+                    "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                  },
+                  "currency": {
+                    "type": "string",
+                    "enum": [
+                      "XOF",
+                      "XAF",
+                      "NGN",
+                      "GHS",
+                      "CDF",
+                      "EUR",
+                      "USD",
+                      "USDC",
+                      "USDT"
+                    ]
+                  },
+                  "network": {
+                    "type": "string",
+                    "enum": [
+                      "MTN_BJ",
+                      "MTN_CI",
+                      "MTN_CM",
+                      "ORANGE_CI",
+                      "ORANGE_SN",
+                      "ORANGE_ML",
+                      "ORANGE_BF",
+                      "ORANGE_CM",
+                      "MOOV_BJ",
+                      "MOOV_TG",
+                      "MOOV_CI",
+                      "MOOV_BF",
+                      "WAVE_CI",
+                      "WAVE_SN",
+                      "FREE_SN",
+                      "TMONEY_TG",
+                      "MOBICASH_ML",
+                      "MOBICASH_BF",
+                      "DJAMO_CI",
+                      "MIXX_SN",
+                      "MTN_CG",
+                      "AIRTEL_CG",
+                      "ORANGE_CD",
+                      "AIRTEL_CD",
+                      "VODACOM_CD",
+                      "AFRICELL_CD",
+                      "AIRTEL_GA",
+                      "MOMO_NG",
+                      "AIRTEL_NG",
+                      "MTN_GH",
+                      "VODAFONE_GH",
+                      "AIRTELTIGO_GH",
+                      "BANK_XOF",
+                      "BANK_XAF",
+                      "BANK_NGN",
+                      "BANK_GHS",
+                      "BANK_CDF",
+                      "BANK_EUR",
+                      "BANK_USD",
+                      "ETH",
+                      "POLYGON",
+                      "TRON"
+                    ]
+                  },
+                  "recipient": {
+                    "type": "object",
+                    "properties": {
+                      "msisdn": {
+                        "type": "string",
+                        "minLength": 8,
+                        "maxLength": 20
+                      },
+                      "iban": {
+                        "type": "string",
+                        "minLength": 15,
+                        "maxLength": 34
+                      },
+                      "address": {
+                        "type": "string",
+                        "minLength": 20,
+                        "maxLength": 80
+                      },
+                      "chain": {
+                        "type": "string",
+                        "enum": [
+                          "MTN_BJ",
+                          "MTN_CI",
+                          "MTN_CM",
+                          "ORANGE_CI",
+                          "ORANGE_SN",
+                          "ORANGE_ML",
+                          "ORANGE_BF",
+                          "ORANGE_CM",
+                          "MOOV_BJ",
+                          "MOOV_TG",
+                          "MOOV_CI",
+                          "MOOV_BF",
+                          "WAVE_CI",
+                          "WAVE_SN",
+                          "FREE_SN",
+                          "TMONEY_TG",
+                          "MOBICASH_ML",
+                          "MOBICASH_BF",
+                          "DJAMO_CI",
+                          "MIXX_SN",
+                          "MTN_CG",
+                          "AIRTEL_CG",
+                          "ORANGE_CD",
+                          "AIRTEL_CD",
+                          "VODACOM_CD",
+                          "AFRICELL_CD",
+                          "AIRTEL_GA",
+                          "MOMO_NG",
+                          "AIRTEL_NG",
+                          "MTN_GH",
+                          "VODAFONE_GH",
+                          "AIRTELTIGO_GH",
+                          "BANK_XOF",
+                          "BANK_XAF",
+                          "BANK_NGN",
+                          "BANK_GHS",
+                          "BANK_CDF",
+                          "BANK_EUR",
+                          "BANK_USD",
+                          "ETH",
+                          "POLYGON",
+                          "TRON"
+                        ]
+                      },
+                      "fullName": { "type": "string", "maxLength": 180 },
+                      "customerId": { "type": "string", "maxLength": 120 },
+                      "bankName": { "type": "string", "maxLength": 120 },
+                      "bankId": {
+                        "anyOf": [{ "type": "string" }, { "type": "number" }]
+                      },
+                      "accountNumber": { "type": "string", "maxLength": 64 }
+                    },
+                    "additionalProperties": false
+                  },
+                  "description": { "type": "string", "maxLength": 500 },
+                  "category": { "type": "string", "maxLength": 50 },
+                  "counterpartyId": { "type": "string" },
+                  "paymentPin": {
+                    "type": "string",
+                    "minLength": 6,
+                    "maxLength": 6,
+                    "pattern": "^\\d{6}$"
+                  },
+                  "totp": {
+                    "type": "string",
+                    "minLength": 6,
+                    "maxLength": 6,
+                    "pattern": "^\\d{6}$"
+                  }
+                },
+                "required": ["amount", "currency", "network", "recipient"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "parameters": [
+          {
+            "schema": { "type": "string", "maxLength": 128 },
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [true] },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "reference": { "type": "string" },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "PENDING",
+                            "PROCESSING",
+                            "COMPLETED",
+                            "FAILED",
+                            "CANCELLED",
+                            "REFUNDED"
+                          ]
+                        },
+                        "amount": {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "XAF",
+                            "NGN",
+                            "GHS",
+                            "CDF",
+                            "EUR",
+                            "USD",
+                            "USDC",
+                            "USDT"
+                          ]
+                        },
+                        "fee": {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                        },
+                        "network": {
+                          "type": "string",
+                          "enum": [
+                            "MTN_BJ",
+                            "MTN_CI",
+                            "MTN_CM",
+                            "ORANGE_CI",
+                            "ORANGE_SN",
+                            "ORANGE_ML",
+                            "ORANGE_BF",
+                            "ORANGE_CM",
+                            "MOOV_BJ",
+                            "MOOV_TG",
+                            "MOOV_CI",
+                            "MOOV_BF",
+                            "WAVE_CI",
+                            "WAVE_SN",
+                            "FREE_SN",
+                            "TMONEY_TG",
+                            "MOBICASH_ML",
+                            "MOBICASH_BF",
+                            "DJAMO_CI",
+                            "MIXX_SN",
+                            "MTN_CG",
+                            "AIRTEL_CG",
+                            "ORANGE_CD",
+                            "AIRTEL_CD",
+                            "VODACOM_CD",
+                            "AFRICELL_CD",
+                            "AIRTEL_GA",
+                            "MOMO_NG",
+                            "AIRTEL_NG",
+                            "MTN_GH",
+                            "VODAFONE_GH",
+                            "AIRTELTIGO_GH",
+                            "BANK_XOF",
+                            "BANK_XAF",
+                            "BANK_NGN",
+                            "BANK_GHS",
+                            "BANK_CDF",
+                            "BANK_EUR",
+                            "BANK_USD",
+                            "ETH",
+                            "POLYGON",
+                            "TRON"
+                          ],
+                          "nullable": true
+                        },
+                        "provider": {
+                          "type": "string",
+                          "enum": [
+                            "BRIDGE",
+                            "PAL_AFRICA",
+                            "MBIYOPAY",
+                            "INTERNAL",
+                            "PAYDUNYA",
+                            "PAYFONTE"
+                          ],
+                          "nullable": true
+                        },
+                        "description": { "type": "string", "nullable": true },
+                        "recipient": {
+                          "type": "object",
+                          "properties": {
+                            "msisdn": { "type": "string", "nullable": true },
+                            "iban": { "type": "string", "nullable": true },
+                            "address": { "type": "string", "nullable": true },
+                            "chain": {
+                              "type": "string",
+                              "enum": [
+                                "MTN_BJ",
+                                "MTN_CI",
+                                "MTN_CM",
+                                "ORANGE_CI",
+                                "ORANGE_SN",
+                                "ORANGE_ML",
+                                "ORANGE_BF",
+                                "ORANGE_CM",
+                                "MOOV_BJ",
+                                "MOOV_TG",
+                                "MOOV_CI",
+                                "MOOV_BF",
+                                "WAVE_CI",
+                                "WAVE_SN",
+                                "FREE_SN",
+                                "TMONEY_TG",
+                                "MOBICASH_ML",
+                                "MOBICASH_BF",
+                                "DJAMO_CI",
+                                "MIXX_SN",
+                                "MTN_CG",
+                                "AIRTEL_CG",
+                                "ORANGE_CD",
+                                "AIRTEL_CD",
+                                "VODACOM_CD",
+                                "AFRICELL_CD",
+                                "AIRTEL_GA",
+                                "MOMO_NG",
+                                "AIRTEL_NG",
+                                "MTN_GH",
+                                "VODAFONE_GH",
+                                "AIRTELTIGO_GH",
+                                "BANK_XOF",
+                                "BANK_XAF",
+                                "BANK_NGN",
+                                "BANK_GHS",
+                                "BANK_CDF",
+                                "BANK_EUR",
+                                "BANK_USD",
+                                "ETH",
+                                "POLYGON",
+                                "TRON"
+                              ],
+                              "nullable": true
+                            }
+                          },
+                          "required": ["msisdn", "iban", "address", "chain"],
+                          "additionalProperties": false
+                        },
+                        "providerRef": { "type": "string", "nullable": true },
+                        "failureReason": { "type": "string", "nullable": true },
+                        "initiatedAt": { "type": "string" },
+                        "settledAt": { "type": "string", "nullable": true },
+                        "failedAt": { "type": "string", "nullable": true },
+                        "idempotencyKey": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "approvedAt": { "type": "string", "nullable": true },
+                        "autoExecuted": { "type": "boolean" },
+                        "frozen": { "type": "boolean" }
+                      },
+                      "required": [
+                        "id",
+                        "reference",
+                        "status",
+                        "amount",
+                        "currency",
+                        "fee",
+                        "network",
+                        "provider",
+                        "description",
+                        "recipient",
+                        "providerRef",
+                        "failureReason",
+                        "initiatedAt",
+                        "settledAt",
+                        "failedAt",
+                        "idempotencyKey",
+                        "approvedAt",
+                        "autoExecuted",
+                        "frozen"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [false] },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": { "type": "string" },
+                        "message": { "type": "string" },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "error"],
+                  "additionalProperties": false,
+                  "description": "Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden — no org / role / KYB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [false] },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": { "type": "string" },
+                        "message": { "type": "string" },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "error"],
+                  "additionalProperties": false,
+                  "description": "Forbidden — no org / role / KYB"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error or business-rule violation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [false] },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": { "type": "string" },
+                        "message": { "type": "string" },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "error"],
+                  "additionalProperties": false,
+                  "description": "Validation error or business-rule violation"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List payouts (cursor paginated)",
+        "tags": ["payouts"],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": { "type": "string" },
+            "in": "query",
+            "name": "cursor",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [true] },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": { "type": "string" },
+                              "reference": { "type": "string" },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "PENDING",
+                                  "PROCESSING",
+                                  "COMPLETED",
+                                  "FAILED",
+                                  "CANCELLED",
+                                  "REFUNDED"
+                                ]
+                              },
+                              "amount": {
+                                "type": "string",
+                                "pattern": "^\\d+(\\.\\d{1,8})?$",
+                                "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                              },
+                              "currency": {
+                                "type": "string",
+                                "enum": [
+                                  "XOF",
+                                  "XAF",
+                                  "NGN",
+                                  "GHS",
+                                  "CDF",
+                                  "EUR",
+                                  "USD",
+                                  "USDC",
+                                  "USDT"
+                                ]
+                              },
+                              "fee": {
+                                "type": "string",
+                                "pattern": "^\\d+(\\.\\d{1,8})?$",
+                                "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                              },
+                              "network": {
+                                "type": "string",
+                                "enum": [
+                                  "MTN_BJ",
+                                  "MTN_CI",
+                                  "MTN_CM",
+                                  "ORANGE_CI",
+                                  "ORANGE_SN",
+                                  "ORANGE_ML",
+                                  "ORANGE_BF",
+                                  "ORANGE_CM",
+                                  "MOOV_BJ",
+                                  "MOOV_TG",
+                                  "MOOV_CI",
+                                  "MOOV_BF",
+                                  "WAVE_CI",
+                                  "WAVE_SN",
+                                  "FREE_SN",
+                                  "TMONEY_TG",
+                                  "MOBICASH_ML",
+                                  "MOBICASH_BF",
+                                  "DJAMO_CI",
+                                  "MIXX_SN",
+                                  "MTN_CG",
+                                  "AIRTEL_CG",
+                                  "ORANGE_CD",
+                                  "AIRTEL_CD",
+                                  "VODACOM_CD",
+                                  "AFRICELL_CD",
+                                  "AIRTEL_GA",
+                                  "MOMO_NG",
+                                  "AIRTEL_NG",
+                                  "MTN_GH",
+                                  "VODAFONE_GH",
+                                  "AIRTELTIGO_GH",
+                                  "BANK_XOF",
+                                  "BANK_XAF",
+                                  "BANK_NGN",
+                                  "BANK_GHS",
+                                  "BANK_CDF",
+                                  "BANK_EUR",
+                                  "BANK_USD",
+                                  "ETH",
+                                  "POLYGON",
+                                  "TRON"
+                                ],
+                                "nullable": true
+                              },
+                              "provider": {
+                                "type": "string",
+                                "enum": [
+                                  "BRIDGE",
+                                  "PAL_AFRICA",
+                                  "MBIYOPAY",
+                                  "INTERNAL",
+                                  "PAYDUNYA",
+                                  "PAYFONTE"
+                                ],
+                                "nullable": true
+                              },
+                              "description": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "recipient": {
+                                "type": "object",
+                                "properties": {
+                                  "msisdn": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "iban": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "address": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "chain": {
+                                    "type": "string",
+                                    "enum": [
+                                      "MTN_BJ",
+                                      "MTN_CI",
+                                      "MTN_CM",
+                                      "ORANGE_CI",
+                                      "ORANGE_SN",
+                                      "ORANGE_ML",
+                                      "ORANGE_BF",
+                                      "ORANGE_CM",
+                                      "MOOV_BJ",
+                                      "MOOV_TG",
+                                      "MOOV_CI",
+                                      "MOOV_BF",
+                                      "WAVE_CI",
+                                      "WAVE_SN",
+                                      "FREE_SN",
+                                      "TMONEY_TG",
+                                      "MOBICASH_ML",
+                                      "MOBICASH_BF",
+                                      "DJAMO_CI",
+                                      "MIXX_SN",
+                                      "MTN_CG",
+                                      "AIRTEL_CG",
+                                      "ORANGE_CD",
+                                      "AIRTEL_CD",
+                                      "VODACOM_CD",
+                                      "AFRICELL_CD",
+                                      "AIRTEL_GA",
+                                      "MOMO_NG",
+                                      "AIRTEL_NG",
+                                      "MTN_GH",
+                                      "VODAFONE_GH",
+                                      "AIRTELTIGO_GH",
+                                      "BANK_XOF",
+                                      "BANK_XAF",
+                                      "BANK_NGN",
+                                      "BANK_GHS",
+                                      "BANK_CDF",
+                                      "BANK_EUR",
+                                      "BANK_USD",
+                                      "ETH",
+                                      "POLYGON",
+                                      "TRON"
+                                    ],
+                                    "nullable": true
+                                  }
+                                },
+                                "required": [
+                                  "msisdn",
+                                  "iban",
+                                  "address",
+                                  "chain"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "providerRef": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "failureReason": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "initiatedAt": { "type": "string" },
+                              "settledAt": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "failedAt": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "idempotencyKey": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "approvedAt": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "autoExecuted": { "type": "boolean" },
+                              "frozen": { "type": "boolean" }
+                            },
+                            "required": [
+                              "id",
+                              "reference",
+                              "status",
+                              "amount",
+                              "currency",
+                              "fee",
+                              "network",
+                              "provider",
+                              "description",
+                              "recipient",
+                              "providerRef",
+                              "failureReason",
+                              "initiatedAt",
+                              "settledAt",
+                              "failedAt",
+                              "idempotencyKey",
+                              "approvedAt",
+                              "autoExecuted",
+                              "frozen"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "nextCursor": { "type": "string", "nullable": true }
+                      },
+                      "required": ["items", "nextCursor"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/payouts/{id}": {
+      "get": {
+        "summary": "Get one payout (id or reference)",
+        "tags": ["payouts"],
+        "parameters": [
+          {
+            "schema": { "type": "string" },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [true] },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "reference": { "type": "string" },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "PENDING",
+                            "PROCESSING",
+                            "COMPLETED",
+                            "FAILED",
+                            "CANCELLED",
+                            "REFUNDED"
+                          ]
+                        },
+                        "amount": {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "XAF",
+                            "NGN",
+                            "GHS",
+                            "CDF",
+                            "EUR",
+                            "USD",
+                            "USDC",
+                            "USDT"
+                          ]
+                        },
+                        "fee": {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                        },
+                        "network": {
+                          "type": "string",
+                          "enum": [
+                            "MTN_BJ",
+                            "MTN_CI",
+                            "MTN_CM",
+                            "ORANGE_CI",
+                            "ORANGE_SN",
+                            "ORANGE_ML",
+                            "ORANGE_BF",
+                            "ORANGE_CM",
+                            "MOOV_BJ",
+                            "MOOV_TG",
+                            "MOOV_CI",
+                            "MOOV_BF",
+                            "WAVE_CI",
+                            "WAVE_SN",
+                            "FREE_SN",
+                            "TMONEY_TG",
+                            "MOBICASH_ML",
+                            "MOBICASH_BF",
+                            "DJAMO_CI",
+                            "MIXX_SN",
+                            "MTN_CG",
+                            "AIRTEL_CG",
+                            "ORANGE_CD",
+                            "AIRTEL_CD",
+                            "VODACOM_CD",
+                            "AFRICELL_CD",
+                            "AIRTEL_GA",
+                            "MOMO_NG",
+                            "AIRTEL_NG",
+                            "MTN_GH",
+                            "VODAFONE_GH",
+                            "AIRTELTIGO_GH",
+                            "BANK_XOF",
+                            "BANK_XAF",
+                            "BANK_NGN",
+                            "BANK_GHS",
+                            "BANK_CDF",
+                            "BANK_EUR",
+                            "BANK_USD",
+                            "ETH",
+                            "POLYGON",
+                            "TRON"
+                          ],
+                          "nullable": true
+                        },
+                        "provider": {
+                          "type": "string",
+                          "enum": [
+                            "BRIDGE",
+                            "PAL_AFRICA",
+                            "MBIYOPAY",
+                            "INTERNAL",
+                            "PAYDUNYA",
+                            "PAYFONTE"
+                          ],
+                          "nullable": true
+                        },
+                        "description": { "type": "string", "nullable": true },
+                        "recipient": {
+                          "type": "object",
+                          "properties": {
+                            "msisdn": { "type": "string", "nullable": true },
+                            "iban": { "type": "string", "nullable": true },
+                            "address": { "type": "string", "nullable": true },
+                            "chain": {
+                              "type": "string",
+                              "enum": [
+                                "MTN_BJ",
+                                "MTN_CI",
+                                "MTN_CM",
+                                "ORANGE_CI",
+                                "ORANGE_SN",
+                                "ORANGE_ML",
+                                "ORANGE_BF",
+                                "ORANGE_CM",
+                                "MOOV_BJ",
+                                "MOOV_TG",
+                                "MOOV_CI",
+                                "MOOV_BF",
+                                "WAVE_CI",
+                                "WAVE_SN",
+                                "FREE_SN",
+                                "TMONEY_TG",
+                                "MOBICASH_ML",
+                                "MOBICASH_BF",
+                                "DJAMO_CI",
+                                "MIXX_SN",
+                                "MTN_CG",
+                                "AIRTEL_CG",
+                                "ORANGE_CD",
+                                "AIRTEL_CD",
+                                "VODACOM_CD",
+                                "AFRICELL_CD",
+                                "AIRTEL_GA",
+                                "MOMO_NG",
+                                "AIRTEL_NG",
+                                "MTN_GH",
+                                "VODAFONE_GH",
+                                "AIRTELTIGO_GH",
+                                "BANK_XOF",
+                                "BANK_XAF",
+                                "BANK_NGN",
+                                "BANK_GHS",
+                                "BANK_CDF",
+                                "BANK_EUR",
+                                "BANK_USD",
+                                "ETH",
+                                "POLYGON",
+                                "TRON"
+                              ],
+                              "nullable": true
+                            }
+                          },
+                          "required": ["msisdn", "iban", "address", "chain"],
+                          "additionalProperties": false
+                        },
+                        "providerRef": { "type": "string", "nullable": true },
+                        "failureReason": { "type": "string", "nullable": true },
+                        "initiatedAt": { "type": "string" },
+                        "settledAt": { "type": "string", "nullable": true },
+                        "failedAt": { "type": "string", "nullable": true },
+                        "idempotencyKey": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "approvedAt": { "type": "string", "nullable": true },
+                        "autoExecuted": { "type": "boolean" },
+                        "frozen": { "type": "boolean" }
+                      },
+                      "required": [
+                        "id",
+                        "reference",
+                        "status",
+                        "amount",
+                        "currency",
+                        "fee",
+                        "network",
+                        "provider",
+                        "description",
+                        "recipient",
+                        "providerRef",
+                        "failureReason",
+                        "initiatedAt",
+                        "settledAt",
+                        "failedAt",
+                        "idempotencyKey",
+                        "approvedAt",
+                        "autoExecuted",
+                        "frozen"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [false] },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": { "type": "string" },
+                        "message": { "type": "string" },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "error"],
+                  "additionalProperties": false,
+                  "description": "Not found"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/payouts/{id}/approve": {
+      "post": {
+        "summary": "Approve a pending payout",
+        "tags": ["payouts"],
+        "parameters": [
+          {
+            "schema": { "type": "string" },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [true] },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "reference": { "type": "string" },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "PENDING",
+                            "PROCESSING",
+                            "COMPLETED",
+                            "FAILED",
+                            "CANCELLED",
+                            "REFUNDED"
+                          ]
+                        },
+                        "amount": {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "XAF",
+                            "NGN",
+                            "GHS",
+                            "CDF",
+                            "EUR",
+                            "USD",
+                            "USDC",
+                            "USDT"
+                          ]
+                        },
+                        "fee": {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                        },
+                        "network": {
+                          "type": "string",
+                          "enum": [
+                            "MTN_BJ",
+                            "MTN_CI",
+                            "MTN_CM",
+                            "ORANGE_CI",
+                            "ORANGE_SN",
+                            "ORANGE_ML",
+                            "ORANGE_BF",
+                            "ORANGE_CM",
+                            "MOOV_BJ",
+                            "MOOV_TG",
+                            "MOOV_CI",
+                            "MOOV_BF",
+                            "WAVE_CI",
+                            "WAVE_SN",
+                            "FREE_SN",
+                            "TMONEY_TG",
+                            "MOBICASH_ML",
+                            "MOBICASH_BF",
+                            "DJAMO_CI",
+                            "MIXX_SN",
+                            "MTN_CG",
+                            "AIRTEL_CG",
+                            "ORANGE_CD",
+                            "AIRTEL_CD",
+                            "VODACOM_CD",
+                            "AFRICELL_CD",
+                            "AIRTEL_GA",
+                            "MOMO_NG",
+                            "AIRTEL_NG",
+                            "MTN_GH",
+                            "VODAFONE_GH",
+                            "AIRTELTIGO_GH",
+                            "BANK_XOF",
+                            "BANK_XAF",
+                            "BANK_NGN",
+                            "BANK_GHS",
+                            "BANK_CDF",
+                            "BANK_EUR",
+                            "BANK_USD",
+                            "ETH",
+                            "POLYGON",
+                            "TRON"
+                          ],
+                          "nullable": true
+                        },
+                        "provider": {
+                          "type": "string",
+                          "enum": [
+                            "BRIDGE",
+                            "PAL_AFRICA",
+                            "MBIYOPAY",
+                            "INTERNAL",
+                            "PAYDUNYA",
+                            "PAYFONTE"
+                          ],
+                          "nullable": true
+                        },
+                        "description": { "type": "string", "nullable": true },
+                        "recipient": {
+                          "type": "object",
+                          "properties": {
+                            "msisdn": { "type": "string", "nullable": true },
+                            "iban": { "type": "string", "nullable": true },
+                            "address": { "type": "string", "nullable": true },
+                            "chain": {
+                              "type": "string",
+                              "enum": [
+                                "MTN_BJ",
+                                "MTN_CI",
+                                "MTN_CM",
+                                "ORANGE_CI",
+                                "ORANGE_SN",
+                                "ORANGE_ML",
+                                "ORANGE_BF",
+                                "ORANGE_CM",
+                                "MOOV_BJ",
+                                "MOOV_TG",
+                                "MOOV_CI",
+                                "MOOV_BF",
+                                "WAVE_CI",
+                                "WAVE_SN",
+                                "FREE_SN",
+                                "TMONEY_TG",
+                                "MOBICASH_ML",
+                                "MOBICASH_BF",
+                                "DJAMO_CI",
+                                "MIXX_SN",
+                                "MTN_CG",
+                                "AIRTEL_CG",
+                                "ORANGE_CD",
+                                "AIRTEL_CD",
+                                "VODACOM_CD",
+                                "AFRICELL_CD",
+                                "AIRTEL_GA",
+                                "MOMO_NG",
+                                "AIRTEL_NG",
+                                "MTN_GH",
+                                "VODAFONE_GH",
+                                "AIRTELTIGO_GH",
+                                "BANK_XOF",
+                                "BANK_XAF",
+                                "BANK_NGN",
+                                "BANK_GHS",
+                                "BANK_CDF",
+                                "BANK_EUR",
+                                "BANK_USD",
+                                "ETH",
+                                "POLYGON",
+                                "TRON"
+                              ],
+                              "nullable": true
+                            }
+                          },
+                          "required": ["msisdn", "iban", "address", "chain"],
+                          "additionalProperties": false
+                        },
+                        "providerRef": { "type": "string", "nullable": true },
+                        "failureReason": { "type": "string", "nullable": true },
+                        "initiatedAt": { "type": "string" },
+                        "settledAt": { "type": "string", "nullable": true },
+                        "failedAt": { "type": "string", "nullable": true },
+                        "idempotencyKey": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "approvedAt": { "type": "string", "nullable": true },
+                        "autoExecuted": { "type": "boolean" },
+                        "frozen": { "type": "boolean" }
+                      },
+                      "required": [
+                        "id",
+                        "reference",
+                        "status",
+                        "amount",
+                        "currency",
+                        "fee",
+                        "network",
+                        "provider",
+                        "description",
+                        "recipient",
+                        "providerRef",
+                        "failureReason",
+                        "initiatedAt",
+                        "settledAt",
+                        "failedAt",
+                        "idempotencyKey",
+                        "approvedAt",
+                        "autoExecuted",
+                        "frozen"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [false] },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": { "type": "string" },
+                        "message": { "type": "string" },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "error"],
+                  "additionalProperties": false,
+                  "description": "Not found"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (duplicate or state)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [false] },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": { "type": "string" },
+                        "message": { "type": "string" },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "error"],
+                  "additionalProperties": false,
+                  "description": "Conflict (duplicate or state)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/payouts/{id}/reject": {
+      "post": {
+        "summary": "Reject a pending payout",
+        "tags": ["payouts"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": { "type": "string", "maxLength": 500 }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": { "type": "string" },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [true] },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "reference": { "type": "string" },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "PENDING",
+                            "PROCESSING",
+                            "COMPLETED",
+                            "FAILED",
+                            "CANCELLED",
+                            "REFUNDED"
+                          ]
+                        },
+                        "amount": {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "XAF",
+                            "NGN",
+                            "GHS",
+                            "CDF",
+                            "EUR",
+                            "USD",
+                            "USDC",
+                            "USDT"
+                          ]
+                        },
+                        "fee": {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                        },
+                        "network": {
+                          "type": "string",
+                          "enum": [
+                            "MTN_BJ",
+                            "MTN_CI",
+                            "MTN_CM",
+                            "ORANGE_CI",
+                            "ORANGE_SN",
+                            "ORANGE_ML",
+                            "ORANGE_BF",
+                            "ORANGE_CM",
+                            "MOOV_BJ",
+                            "MOOV_TG",
+                            "MOOV_CI",
+                            "MOOV_BF",
+                            "WAVE_CI",
+                            "WAVE_SN",
+                            "FREE_SN",
+                            "TMONEY_TG",
+                            "MOBICASH_ML",
+                            "MOBICASH_BF",
+                            "DJAMO_CI",
+                            "MIXX_SN",
+                            "MTN_CG",
+                            "AIRTEL_CG",
+                            "ORANGE_CD",
+                            "AIRTEL_CD",
+                            "VODACOM_CD",
+                            "AFRICELL_CD",
+                            "AIRTEL_GA",
+                            "MOMO_NG",
+                            "AIRTEL_NG",
+                            "MTN_GH",
+                            "VODAFONE_GH",
+                            "AIRTELTIGO_GH",
+                            "BANK_XOF",
+                            "BANK_XAF",
+                            "BANK_NGN",
+                            "BANK_GHS",
+                            "BANK_CDF",
+                            "BANK_EUR",
+                            "BANK_USD",
+                            "ETH",
+                            "POLYGON",
+                            "TRON"
+                          ],
+                          "nullable": true
+                        },
+                        "provider": {
+                          "type": "string",
+                          "enum": [
+                            "BRIDGE",
+                            "PAL_AFRICA",
+                            "MBIYOPAY",
+                            "INTERNAL",
+                            "PAYDUNYA",
+                            "PAYFONTE"
+                          ],
+                          "nullable": true
+                        },
+                        "description": { "type": "string", "nullable": true },
+                        "recipient": {
+                          "type": "object",
+                          "properties": {
+                            "msisdn": { "type": "string", "nullable": true },
+                            "iban": { "type": "string", "nullable": true },
+                            "address": { "type": "string", "nullable": true },
+                            "chain": {
+                              "type": "string",
+                              "enum": [
+                                "MTN_BJ",
+                                "MTN_CI",
+                                "MTN_CM",
+                                "ORANGE_CI",
+                                "ORANGE_SN",
+                                "ORANGE_ML",
+                                "ORANGE_BF",
+                                "ORANGE_CM",
+                                "MOOV_BJ",
+                                "MOOV_TG",
+                                "MOOV_CI",
+                                "MOOV_BF",
+                                "WAVE_CI",
+                                "WAVE_SN",
+                                "FREE_SN",
+                                "TMONEY_TG",
+                                "MOBICASH_ML",
+                                "MOBICASH_BF",
+                                "DJAMO_CI",
+                                "MIXX_SN",
+                                "MTN_CG",
+                                "AIRTEL_CG",
+                                "ORANGE_CD",
+                                "AIRTEL_CD",
+                                "VODACOM_CD",
+                                "AFRICELL_CD",
+                                "AIRTEL_GA",
+                                "MOMO_NG",
+                                "AIRTEL_NG",
+                                "MTN_GH",
+                                "VODAFONE_GH",
+                                "AIRTELTIGO_GH",
+                                "BANK_XOF",
+                                "BANK_XAF",
+                                "BANK_NGN",
+                                "BANK_GHS",
+                                "BANK_CDF",
+                                "BANK_EUR",
+                                "BANK_USD",
+                                "ETH",
+                                "POLYGON",
+                                "TRON"
+                              ],
+                              "nullable": true
+                            }
+                          },
+                          "required": ["msisdn", "iban", "address", "chain"],
+                          "additionalProperties": false
+                        },
+                        "providerRef": { "type": "string", "nullable": true },
+                        "failureReason": { "type": "string", "nullable": true },
+                        "initiatedAt": { "type": "string" },
+                        "settledAt": { "type": "string", "nullable": true },
+                        "failedAt": { "type": "string", "nullable": true },
+                        "idempotencyKey": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "approvedAt": { "type": "string", "nullable": true },
+                        "autoExecuted": { "type": "boolean" },
+                        "frozen": { "type": "boolean" }
+                      },
+                      "required": [
+                        "id",
+                        "reference",
+                        "status",
+                        "amount",
+                        "currency",
+                        "fee",
+                        "network",
+                        "provider",
+                        "description",
+                        "recipient",
+                        "providerRef",
+                        "failureReason",
+                        "initiatedAt",
+                        "settledAt",
+                        "failedAt",
+                        "idempotencyKey",
+                        "approvedAt",
+                        "autoExecuted",
+                        "frozen"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [false] },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": { "type": "string" },
+                        "message": { "type": "string" },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "error"],
+                  "additionalProperties": false,
+                  "description": "Not found"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (duplicate or state)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [false] },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": { "type": "string" },
+                        "message": { "type": "string" },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "error"],
+                  "additionalProperties": false,
+                  "description": "Conflict (duplicate or state)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/payouts/{id}/cancel": {
+      "post": {
+        "summary": "Cancel a pending payout (releases reservation)",
+        "tags": ["payouts"],
+        "parameters": [
+          {
+            "schema": { "type": "string" },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [true] },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "reference": { "type": "string" },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "PENDING",
+                            "PROCESSING",
+                            "COMPLETED",
+                            "FAILED",
+                            "CANCELLED",
+                            "REFUNDED"
+                          ]
+                        },
+                        "amount": {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "XAF",
+                            "NGN",
+                            "GHS",
+                            "CDF",
+                            "EUR",
+                            "USD",
+                            "USDC",
+                            "USDT"
+                          ]
+                        },
+                        "fee": {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                        },
+                        "network": {
+                          "type": "string",
+                          "enum": [
+                            "MTN_BJ",
+                            "MTN_CI",
+                            "MTN_CM",
+                            "ORANGE_CI",
+                            "ORANGE_SN",
+                            "ORANGE_ML",
+                            "ORANGE_BF",
+                            "ORANGE_CM",
+                            "MOOV_BJ",
+                            "MOOV_TG",
+                            "MOOV_CI",
+                            "MOOV_BF",
+                            "WAVE_CI",
+                            "WAVE_SN",
+                            "FREE_SN",
+                            "TMONEY_TG",
+                            "MOBICASH_ML",
+                            "MOBICASH_BF",
+                            "DJAMO_CI",
+                            "MIXX_SN",
+                            "MTN_CG",
+                            "AIRTEL_CG",
+                            "ORANGE_CD",
+                            "AIRTEL_CD",
+                            "VODACOM_CD",
+                            "AFRICELL_CD",
+                            "AIRTEL_GA",
+                            "MOMO_NG",
+                            "AIRTEL_NG",
+                            "MTN_GH",
+                            "VODAFONE_GH",
+                            "AIRTELTIGO_GH",
+                            "BANK_XOF",
+                            "BANK_XAF",
+                            "BANK_NGN",
+                            "BANK_GHS",
+                            "BANK_CDF",
+                            "BANK_EUR",
+                            "BANK_USD",
+                            "ETH",
+                            "POLYGON",
+                            "TRON"
+                          ],
+                          "nullable": true
+                        },
+                        "provider": {
+                          "type": "string",
+                          "enum": [
+                            "BRIDGE",
+                            "PAL_AFRICA",
+                            "MBIYOPAY",
+                            "INTERNAL",
+                            "PAYDUNYA",
+                            "PAYFONTE"
+                          ],
+                          "nullable": true
+                        },
+                        "description": { "type": "string", "nullable": true },
+                        "recipient": {
+                          "type": "object",
+                          "properties": {
+                            "msisdn": { "type": "string", "nullable": true },
+                            "iban": { "type": "string", "nullable": true },
+                            "address": { "type": "string", "nullable": true },
+                            "chain": {
+                              "type": "string",
+                              "enum": [
+                                "MTN_BJ",
+                                "MTN_CI",
+                                "MTN_CM",
+                                "ORANGE_CI",
+                                "ORANGE_SN",
+                                "ORANGE_ML",
+                                "ORANGE_BF",
+                                "ORANGE_CM",
+                                "MOOV_BJ",
+                                "MOOV_TG",
+                                "MOOV_CI",
+                                "MOOV_BF",
+                                "WAVE_CI",
+                                "WAVE_SN",
+                                "FREE_SN",
+                                "TMONEY_TG",
+                                "MOBICASH_ML",
+                                "MOBICASH_BF",
+                                "DJAMO_CI",
+                                "MIXX_SN",
+                                "MTN_CG",
+                                "AIRTEL_CG",
+                                "ORANGE_CD",
+                                "AIRTEL_CD",
+                                "VODACOM_CD",
+                                "AFRICELL_CD",
+                                "AIRTEL_GA",
+                                "MOMO_NG",
+                                "AIRTEL_NG",
+                                "MTN_GH",
+                                "VODAFONE_GH",
+                                "AIRTELTIGO_GH",
+                                "BANK_XOF",
+                                "BANK_XAF",
+                                "BANK_NGN",
+                                "BANK_GHS",
+                                "BANK_CDF",
+                                "BANK_EUR",
+                                "BANK_USD",
+                                "ETH",
+                                "POLYGON",
+                                "TRON"
+                              ],
+                              "nullable": true
+                            }
+                          },
+                          "required": ["msisdn", "iban", "address", "chain"],
+                          "additionalProperties": false
+                        },
+                        "providerRef": { "type": "string", "nullable": true },
+                        "failureReason": { "type": "string", "nullable": true },
+                        "initiatedAt": { "type": "string" },
+                        "settledAt": { "type": "string", "nullable": true },
+                        "failedAt": { "type": "string", "nullable": true },
+                        "idempotencyKey": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "approvedAt": { "type": "string", "nullable": true },
+                        "autoExecuted": { "type": "boolean" },
+                        "frozen": { "type": "boolean" }
+                      },
+                      "required": [
+                        "id",
+                        "reference",
+                        "status",
+                        "amount",
+                        "currency",
+                        "fee",
+                        "network",
+                        "provider",
+                        "description",
+                        "recipient",
+                        "providerRef",
+                        "failureReason",
+                        "initiatedAt",
+                        "settledAt",
+                        "failedAt",
+                        "idempotencyKey",
+                        "approvedAt",
+                        "autoExecuted",
+                        "frozen"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [false] },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": { "type": "string" },
+                        "message": { "type": "string" },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "error"],
+                  "additionalProperties": false,
+                  "description": "Not found"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (duplicate or state)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [false] },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": { "type": "string" },
+                        "message": { "type": "string" },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "error"],
+                  "additionalProperties": false,
+                  "description": "Conflict (duplicate or state)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/payins/checkout": {
+      "post": {
+        "summary": "Create a payin checkout link",
+        "tags": ["payins"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "string",
+                    "pattern": "^\\d+(\\.\\d{1,8})?$",
+                    "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                  },
+                  "currency": {
+                    "type": "string",
+                    "enum": [
+                      "XOF",
+                      "XAF",
+                      "NGN",
+                      "GHS",
+                      "CDF",
+                      "EUR",
+                      "USD",
+                      "USDC",
+                      "USDT"
+                    ]
+                  },
+                  "network": {
+                    "type": "string",
+                    "enum": [
+                      "MTN_BJ",
+                      "MTN_CI",
+                      "MTN_CM",
+                      "ORANGE_CI",
+                      "ORANGE_SN",
+                      "ORANGE_ML",
+                      "ORANGE_BF",
+                      "ORANGE_CM",
+                      "MOOV_BJ",
+                      "MOOV_TG",
+                      "MOOV_CI",
+                      "MOOV_BF",
+                      "WAVE_CI",
+                      "WAVE_SN",
+                      "FREE_SN",
+                      "TMONEY_TG",
+                      "MOBICASH_ML",
+                      "MOBICASH_BF",
+                      "DJAMO_CI",
+                      "MIXX_SN",
+                      "MTN_CG",
+                      "AIRTEL_CG",
+                      "ORANGE_CD",
+                      "AIRTEL_CD",
+                      "VODACOM_CD",
+                      "AFRICELL_CD",
+                      "AIRTEL_GA",
+                      "MOMO_NG",
+                      "AIRTEL_NG",
+                      "MTN_GH",
+                      "VODAFONE_GH",
+                      "AIRTELTIGO_GH",
+                      "BANK_XOF",
+                      "BANK_XAF",
+                      "BANK_NGN",
+                      "BANK_GHS",
+                      "BANK_CDF",
+                      "BANK_EUR",
+                      "BANK_USD",
+                      "ETH",
+                      "POLYGON",
+                      "TRON"
+                    ]
+                  },
+                  "customer": {
+                    "type": "object",
+                    "properties": {
+                      "fullName": { "type": "string", "maxLength": 180 },
+                      "msisdn": {
+                        "type": "string",
+                        "minLength": 8,
+                        "maxLength": 20
+                      },
+                      "email": { "type": "string", "format": "email" }
+                    },
+                    "additionalProperties": false
+                  },
+                  "redirectUrl": { "type": "string", "format": "uri" },
+                  "expiresInSec": {
+                    "type": "integer",
+                    "minimum": 60,
+                    "maximum": 86400
+                  }
+                },
+                "required": ["amount", "currency", "customer"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [true] },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "reference": { "type": "string" },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "PENDING",
+                            "PROCESSING",
+                            "COMPLETED",
+                            "FAILED",
+                            "CANCELLED",
+                            "REFUNDED"
+                          ]
+                        },
+                        "amount": {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "XAF",
+                            "NGN",
+                            "GHS",
+                            "CDF",
+                            "EUR",
+                            "USD",
+                            "USDC",
+                            "USDT"
+                          ]
+                        },
+                        "checkoutUrl": { "type": "string", "nullable": true },
+                        "checkoutToken": { "type": "string", "nullable": true },
+                        "expiresInSec": { "type": "integer" },
+                        "provider": {
+                          "type": "string",
+                          "enum": [
+                            "BRIDGE",
+                            "PAL_AFRICA",
+                            "MBIYOPAY",
+                            "INTERNAL",
+                            "PAYDUNYA",
+                            "PAYFONTE"
+                          ]
+                        },
+                        "providerMode": {
+                          "type": "string",
+                          "enum": ["live", "mock", "disabled"]
+                        }
+                      },
+                      "required": [
+                        "reference",
+                        "status",
+                        "amount",
+                        "currency",
+                        "checkoutUrl",
+                        "checkoutToken",
+                        "expiresInSec",
+                        "provider",
+                        "providerMode"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error or business-rule violation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [false] },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": { "type": "string" },
+                        "message": { "type": "string" },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "error"],
+                  "additionalProperties": false,
+                  "description": "Validation error or business-rule violation"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/payins/{reference}": {
+      "get": {
+        "summary": "Get payin status by reference or id",
+        "tags": ["payins"],
+        "parameters": [
+          {
+            "schema": { "type": "string" },
+            "in": "path",
+            "name": "reference",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [true] },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "reference": { "type": "string" },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "PENDING",
+                            "PROCESSING",
+                            "COMPLETED",
+                            "FAILED",
+                            "CANCELLED",
+                            "REFUNDED"
+                          ]
+                        },
+                        "amount": {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "XAF",
+                            "NGN",
+                            "GHS",
+                            "CDF",
+                            "EUR",
+                            "USD",
+                            "USDC",
+                            "USDT"
+                          ]
+                        },
+                        "network": {
+                          "type": "string",
+                          "enum": [
+                            "MTN_BJ",
+                            "MTN_CI",
+                            "MTN_CM",
+                            "ORANGE_CI",
+                            "ORANGE_SN",
+                            "ORANGE_ML",
+                            "ORANGE_BF",
+                            "ORANGE_CM",
+                            "MOOV_BJ",
+                            "MOOV_TG",
+                            "MOOV_CI",
+                            "MOOV_BF",
+                            "WAVE_CI",
+                            "WAVE_SN",
+                            "FREE_SN",
+                            "TMONEY_TG",
+                            "MOBICASH_ML",
+                            "MOBICASH_BF",
+                            "DJAMO_CI",
+                            "MIXX_SN",
+                            "MTN_CG",
+                            "AIRTEL_CG",
+                            "ORANGE_CD",
+                            "AIRTEL_CD",
+                            "VODACOM_CD",
+                            "AFRICELL_CD",
+                            "AIRTEL_GA",
+                            "MOMO_NG",
+                            "AIRTEL_NG",
+                            "MTN_GH",
+                            "VODAFONE_GH",
+                            "AIRTELTIGO_GH",
+                            "BANK_XOF",
+                            "BANK_XAF",
+                            "BANK_NGN",
+                            "BANK_GHS",
+                            "BANK_CDF",
+                            "BANK_EUR",
+                            "BANK_USD",
+                            "ETH",
+                            "POLYGON",
+                            "TRON"
+                          ],
+                          "nullable": true
+                        },
+                        "provider": {
+                          "type": "string",
+                          "enum": [
+                            "BRIDGE",
+                            "PAL_AFRICA",
+                            "MBIYOPAY",
+                            "INTERNAL",
+                            "PAYDUNYA",
+                            "PAYFONTE"
+                          ],
+                          "nullable": true
+                        },
+                        "checkoutUrl": { "type": "string", "nullable": true },
+                        "expiresAt": { "type": "string", "nullable": true },
+                        "initiatedAt": { "type": "string" },
+                        "settledAt": { "type": "string", "nullable": true }
+                      },
+                      "required": [
+                        "reference",
+                        "status",
+                        "amount",
+                        "currency",
+                        "network",
+                        "provider",
+                        "checkoutUrl",
+                        "expiresAt",
+                        "initiatedAt",
+                        "settledAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [false] },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": { "type": "string" },
+                        "message": { "type": "string" },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "error"],
+                  "additionalProperties": false,
+                  "description": "Not found"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/fx/rates": {
+      "get": {
+        "summary": "Current FX rates with spread",
+        "tags": ["fx"],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [true] },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "spreadBps": { "type": "number" },
+                        "generatedAt": { "type": "string" },
+                        "rates": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "from": {
+                                "type": "string",
+                                "enum": [
+                                  "XOF",
+                                  "XAF",
+                                  "NGN",
+                                  "GHS",
+                                  "CDF",
+                                  "EUR",
+                                  "USD",
+                                  "USDC",
+                                  "USDT"
+                                ]
+                              },
+                              "to": {
+                                "type": "string",
+                                "enum": [
+                                  "XOF",
+                                  "XAF",
+                                  "NGN",
+                                  "GHS",
+                                  "CDF",
+                                  "EUR",
+                                  "USD",
+                                  "USDC",
+                                  "USDT"
+                                ]
+                              },
+                              "mid": { "type": "string" },
+                              "buy": { "type": "string" },
+                              "sell": { "type": "string" },
+                              "source": { "type": "string" },
+                              "validFrom": { "type": "string" }
+                            },
+                            "required": [
+                              "from",
+                              "to",
+                              "mid",
+                              "buy",
+                              "sell",
+                              "source",
+                              "validFrom"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": ["spreadBps", "generatedAt", "rates"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/fx/quote": {
+      "post": {
+        "summary": "Indicative conversion quote (valid 60s)",
+        "tags": ["fx"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "from": {
+                    "type": "string",
+                    "enum": [
+                      "XOF",
+                      "XAF",
+                      "NGN",
+                      "GHS",
+                      "CDF",
+                      "EUR",
+                      "USD",
+                      "USDC",
+                      "USDT"
+                    ]
+                  },
+                  "to": {
+                    "type": "string",
+                    "enum": [
+                      "XOF",
+                      "XAF",
+                      "NGN",
+                      "GHS",
+                      "CDF",
+                      "EUR",
+                      "USD",
+                      "USDC",
+                      "USDT"
+                    ]
+                  },
+                  "amount": {
+                    "type": "string",
+                    "pattern": "^\\d+(\\.\\d{1,8})?$",
+                    "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                  },
+                  "side": {
+                    "type": "string",
+                    "enum": ["debit_from", "credit_to"],
+                    "default": "debit_from"
+                  }
+                },
+                "required": ["from", "to", "amount"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [true] },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "from": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "XAF",
+                            "NGN",
+                            "GHS",
+                            "CDF",
+                            "EUR",
+                            "USD",
+                            "USDC",
+                            "USDT"
+                          ]
+                        },
+                        "to": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "XAF",
+                            "NGN",
+                            "GHS",
+                            "CDF",
+                            "EUR",
+                            "USD",
+                            "USDC",
+                            "USDT"
+                          ]
+                        },
+                        "fromAmount": {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                        },
+                        "toAmount": {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                        },
+                        "midRate": { "type": "string" },
+                        "appliedRate": { "type": "string" },
+                        "spreadBps": { "type": "number" },
+                        "expiresAt": { "type": "string" }
+                      },
+                      "required": [
+                        "from",
+                        "to",
+                        "fromAmount",
+                        "toAmount",
+                        "midRate",
+                        "appliedRate",
+                        "spreadBps",
+                        "expiresAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [false] },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": { "type": "string" },
+                        "message": { "type": "string" },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "error"],
+                  "additionalProperties": false,
+                  "description": "Not found"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error or business-rule violation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [false] },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": { "type": "string" },
+                        "message": { "type": "string" },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "error"],
+                  "additionalProperties": false,
+                  "description": "Validation error or business-rule violation"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/fx/convert": {
+      "post": {
+        "summary": "Execute a conversion between two wallets",
+        "tags": ["fx"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "from": {
+                    "type": "string",
+                    "enum": [
+                      "XOF",
+                      "XAF",
+                      "NGN",
+                      "GHS",
+                      "CDF",
+                      "EUR",
+                      "USD",
+                      "USDC",
+                      "USDT"
+                    ]
+                  },
+                  "to": {
+                    "type": "string",
+                    "enum": [
+                      "XOF",
+                      "XAF",
+                      "NGN",
+                      "GHS",
+                      "CDF",
+                      "EUR",
+                      "USD",
+                      "USDC",
+                      "USDT"
+                    ]
+                  },
+                  "amount": {
+                    "type": "string",
+                    "pattern": "^\\d+(\\.\\d{1,8})?$",
+                    "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                  },
+                  "reference": { "type": "string", "maxLength": 64 }
+                },
+                "required": ["from", "to", "amount"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "parameters": [
+          {
+            "schema": { "type": "string", "maxLength": 128 },
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [true] },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "reference": { "type": "string" },
+                        "status": { "type": "string" },
+                        "fromCurrency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "XAF",
+                            "NGN",
+                            "GHS",
+                            "CDF",
+                            "EUR",
+                            "USD",
+                            "USDC",
+                            "USDT"
+                          ]
+                        },
+                        "toCurrency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "XAF",
+                            "NGN",
+                            "GHS",
+                            "CDF",
+                            "EUR",
+                            "USD",
+                            "USDC",
+                            "USDT"
+                          ]
+                        },
+                        "fromAmount": {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                        },
+                        "toAmount": {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                        },
+                        "midRate": { "type": "string" },
+                        "appliedRate": { "type": "string" },
+                        "spreadBps": { "type": "number" },
+                        "settledAt": { "type": "string", "nullable": true }
+                      },
+                      "required": [
+                        "id",
+                        "reference",
+                        "status",
+                        "fromCurrency",
+                        "toCurrency",
+                        "fromAmount",
+                        "toAmount",
+                        "midRate",
+                        "appliedRate",
+                        "spreadBps",
+                        "settledAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [false] },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": { "type": "string" },
+                        "message": { "type": "string" },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "error"],
+                  "additionalProperties": false,
+                  "description": "Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden — no org / role / KYB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [false] },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": { "type": "string" },
+                        "message": { "type": "string" },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "error"],
+                  "additionalProperties": false,
+                  "description": "Forbidden — no org / role / KYB"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error or business-rule violation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [false] },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": { "type": "string" },
+                        "message": { "type": "string" },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "error"],
+                  "additionalProperties": false,
+                  "description": "Validation error or business-rule violation"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/checkout-sessions/": {
+      "post": {
+        "summary": "Créer une session de checkout (widget embarqueable)",
+        "tags": ["checkout-sessions"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "amountFiat": {
+                    "type": "string",
+                    "pattern": "^\\d+(\\.\\d{1,8})?$",
+                    "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                  },
+                  "currency": {
+                    "type": "string",
+                    "enum": [
+                      "XOF",
+                      "XAF",
+                      "NGN",
+                      "GHS",
+                      "CDF",
+                      "EUR",
+                      "USD",
+                      "USDC",
+                      "USDT"
+                    ]
+                  },
+                  "description": { "type": "string", "maxLength": 500 },
+                  "customer": {
+                    "type": "object",
+                    "properties": {
+                      "name": { "type": "string", "maxLength": 180 },
+                      "email": { "type": "string", "format": "email" },
+                      "msisdn": { "type": "string", "maxLength": 20 }
+                    },
+                    "additionalProperties": false
+                  },
+                  "webhookUrl": { "type": "string", "format": "uri" },
+                  "successUrl": { "type": "string", "format": "uri" },
+                  "cancelUrl": { "type": "string", "format": "uri" },
+                  "allowedOrigins": {
+                    "type": "array",
+                    "items": { "type": "string", "format": "uri" },
+                    "maxItems": 10
+                  },
+                  "expiresInSec": {
+                    "type": "integer",
+                    "minimum": 60,
+                    "maximum": 604800
+                  },
+                  "metadata": { "type": "object", "additionalProperties": {} }
+                },
+                "required": ["amountFiat", "currency"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [true] },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "token": { "type": "string" },
+                        "status": { "type": "string" },
+                        "embedUrl": { "type": "string" },
+                        "amountFiat": {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "XAF",
+                            "NGN",
+                            "GHS",
+                            "CDF",
+                            "EUR",
+                            "USD",
+                            "USDC",
+                            "USDT"
+                          ]
+                        },
+                        "expiresAt": { "type": "string" },
+                        "webhookSecret": { "type": "string", "nullable": true }
+                      },
+                      "required": [
+                        "id",
+                        "token",
+                        "status",
+                        "embedUrl",
+                        "amountFiat",
+                        "currency",
+                        "expiresAt",
+                        "webhookSecret"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [false] },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": { "type": "string" },
+                        "message": { "type": "string" },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "error"],
+                  "additionalProperties": false,
+                  "description": "Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden — no org / role / KYB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [false] },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": { "type": "string" },
+                        "message": { "type": "string" },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "error"],
+                  "additionalProperties": false,
+                  "description": "Forbidden — no org / role / KYB"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error or business-rule violation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [false] },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": { "type": "string" },
+                        "message": { "type": "string" },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "error"],
+                  "additionalProperties": false,
+                  "description": "Validation error or business-rule violation"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/checkout-sessions/{token}": {
+      "get": {
+        "summary": "Lire l'état d'une session checkout",
+        "tags": ["checkout-sessions"],
+        "parameters": [
+          {
+            "schema": { "type": "string" },
+            "in": "path",
+            "name": "token",
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [true] },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "token": { "type": "string" },
+                        "status": { "type": "string" },
+                        "amountFiat": {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "XOF",
+                            "XAF",
+                            "NGN",
+                            "GHS",
+                            "CDF",
+                            "EUR",
+                            "USD",
+                            "USDC",
+                            "USDT"
+                          ]
+                        },
+                        "description": { "type": "string", "nullable": true },
+                        "customer": {
+                          "type": "object",
+                          "properties": {
+                            "name": { "type": "string", "nullable": true },
+                            "email": { "type": "string", "nullable": true },
+                            "msisdn": { "type": "string", "nullable": true }
+                          },
+                          "required": ["name", "email", "msisdn"],
+                          "additionalProperties": false
+                        },
+                        "merchantName": { "type": "string" },
+                        "successUrl": { "type": "string", "nullable": true },
+                        "cancelUrl": { "type": "string", "nullable": true },
+                        "expiresAt": { "type": "string" }
+                      },
+                      "required": [
+                        "id",
+                        "token",
+                        "status",
+                        "amountFiat",
+                        "currency",
+                        "description",
+                        "customer",
+                        "merchantName",
+                        "successUrl",
+                        "cancelUrl",
+                        "expiresAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [false] },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": { "type": "string" },
+                        "message": { "type": "string" },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "error"],
+                  "additionalProperties": false,
+                  "description": "Not found"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/checkout-sessions/{token}/submit": {
+      "post": {
+        "summary": "Soumettre les infos payeur et déclencher le payin",
+        "tags": ["checkout-sessions"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "network": {
+                    "type": "string",
+                    "enum": [
+                      "MTN_BJ",
+                      "MTN_CI",
+                      "MTN_CM",
+                      "ORANGE_CI",
+                      "ORANGE_SN",
+                      "ORANGE_ML",
+                      "ORANGE_BF",
+                      "ORANGE_CM",
+                      "MOOV_BJ",
+                      "MOOV_TG",
+                      "MOOV_CI",
+                      "MOOV_BF",
+                      "WAVE_CI",
+                      "WAVE_SN",
+                      "FREE_SN",
+                      "TMONEY_TG",
+                      "MOBICASH_ML",
+                      "MOBICASH_BF",
+                      "DJAMO_CI",
+                      "MIXX_SN",
+                      "MTN_CG",
+                      "AIRTEL_CG",
+                      "ORANGE_CD",
+                      "AIRTEL_CD",
+                      "VODACOM_CD",
+                      "AFRICELL_CD",
+                      "AIRTEL_GA",
+                      "MOMO_NG",
+                      "AIRTEL_NG",
+                      "MTN_GH",
+                      "VODAFONE_GH",
+                      "AIRTELTIGO_GH",
+                      "BANK_XOF",
+                      "BANK_XAF",
+                      "BANK_NGN",
+                      "BANK_GHS",
+                      "BANK_CDF",
+                      "BANK_EUR",
+                      "BANK_USD",
+                      "ETH",
+                      "POLYGON",
+                      "TRON"
+                    ]
+                  },
+                  "customer": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 180
+                      },
+                      "email": { "type": "string", "format": "email" },
+                      "msisdn": {
+                        "type": "string",
+                        "minLength": 8,
+                        "maxLength": 20
+                      }
+                    },
+                    "required": ["name"],
+                    "additionalProperties": false
+                  },
+                  "redirectUrl": { "type": "string", "format": "uri" }
+                },
+                "required": ["network", "customer"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "parameters": [
+          {
+            "schema": { "type": "string" },
+            "in": "path",
+            "name": "token",
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [true] },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "status": { "type": "string" },
+                        "reference": { "type": "string" },
+                        "checkoutUrl": { "type": "string", "nullable": true },
+                        "checkoutToken": { "type": "string", "nullable": true }
+                      },
+                      "required": [
+                        "status",
+                        "reference",
+                        "checkoutUrl",
+                        "checkoutToken"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [false] },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": { "type": "string" },
+                        "message": { "type": "string" },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "error"],
+                  "additionalProperties": false,
+                  "description": "Not found"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (duplicate or state)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [false] },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": { "type": "string" },
+                        "message": { "type": "string" },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "error"],
+                  "additionalProperties": false,
+                  "description": "Conflict (duplicate or state)"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error or business-rule violation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [false] },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": { "type": "string" },
+                        "message": { "type": "string" },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "error"],
+                  "additionalProperties": false,
+                  "description": "Validation error or business-rule violation"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/checkout-sessions/{token}/cancel": {
+      "post": {
+        "summary": "Annuler une session checkout",
+        "tags": ["checkout-sessions"],
+        "parameters": [
+          {
+            "schema": { "type": "string" },
+            "in": "path",
+            "name": "token",
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [true] },
+                    "data": {
+                      "type": "object",
+                      "properties": { "status": { "type": "string" } },
+                      "required": ["status"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [false] },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": { "type": "string" },
+                        "message": { "type": "string" },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "error"],
+                  "additionalProperties": false,
+                  "description": "Not found"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (duplicate or state)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [false] },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": { "type": "string" },
+                        "message": { "type": "string" },
+                        "details": {}
+                      },
+                      "required": ["code", "message"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "error"],
+                  "additionalProperties": false,
+                  "description": "Conflict (duplicate or state)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/status/": {
+      "get": {
+        "summary": "Public status board",
+        "tags": ["status"],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [true] },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "generatedAt": { "type": "string" },
+                        "refreshIntervalMs": { "type": "number" },
+                        "overall": {
+                          "type": "string",
+                          "enum": ["ok", "warn", "down"]
+                        },
+                        "overallLabel": { "type": "string" },
+                        "services": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": { "type": "string" },
+                              "name": { "type": "string" },
+                              "meta": { "type": "string", "nullable": true },
+                              "status": {
+                                "type": "string",
+                                "enum": ["ok", "warn", "down"]
+                              },
+                              "label": { "type": "string" },
+                              "group": { "type": "string" }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "meta",
+                              "status",
+                              "label",
+                              "group"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "upstreamMode": {
+                          "type": "string",
+                          "enum": ["mock", "live", "db", "disabled"]
+                        }
+                      },
+                      "required": [
+                        "generatedAt",
+                        "refreshIntervalMs",
+                        "overall",
+                        "overallLabel",
+                        "services",
+                        "upstreamMode"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["ok", "data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "servers": [{ "url": "http://localhost", "description": "Local dev" }],
+  "security": [{ "bearerAuth": [] }, { "cookieAuth": [] }],
+  "tags": [
+    {
+      "name": "payouts",
+      "description": "Versements Mobile Money / banque / stablecoin"
+    },
+    { "name": "payins", "description": "Encaissements et liens de paiement" },
+    { "name": "fx", "description": "Cotations et conversions multi-devises" },
+    { "name": "status", "description": "Statut public des services" },
+    { "name": "checkout-sessions", "description": "Sessions de checkout (widget embarqueable)" }
+  ]
+}

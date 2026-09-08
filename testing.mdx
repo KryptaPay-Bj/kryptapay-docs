@@ -1,0 +1,89 @@
+---
+title: "Testing"
+---
+
+Learn about error handling when using the API.
+
+## Transaction Status
+
+The API uses standard HTTP status codes.
+
+| Status | Description |
+| --- | --- |
+| `200` | Success |
+| `201` | Resource created |
+| `400` | Bad request |
+| `401` | Unauthorized |
+| `403` | Forbidden |
+| `404` | Resource not found |
+| `409` | Conflict |
+| `422` | Validation error |
+| `429` | Too many requests |
+| `500` | Internal server error |
+| `502` | Bad gateway |
+
+## Error Handling
+
+When a transaction cannot be completed, the API returns a machine-readable failure code along with a human-readable message. Use these codes to determine the appropriate action for your application.
+
+### Response Format
+
+```json
+
+{
+  "ok": false,
+  "error": {
+    "code": "...",
+    "message": "...",
+  }
+}
+```
+
+Example error response body:
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "amount_below_min",
+    "message": "Le montant minimum pour un dépôt par mobile money est 300 XOF."
+  }
+}
+```
+
+### Failure Codes
+
+| Failure Code | Description | Recommended Action |
+| --- | --- | --- |
+| `insufficient_funds` | The merchant's wallet doesn't have enough balance to cover the payout. | Top up the wallet and retry. |
+| `insufficient_funds_with_fee` | The wallet balance doesn't cover the payout amount plus the network fee. | Top up the wallet (amount \+ fee) and retry. |
+| `no_wallet` | No active wallet exists for the requested currency. | Provision a wallet for that currency before retrying. |
+| `network_unavailable` | The mobile money operator is temporarily under maintenance. | Retry later or choose another network. |
+| `amount_below_min` | The amount is below the minimum for mobile money (300, or 700 for NGN). | Increase the amount and retry. |
+| `amount_decimal_not_allowed` | A decimal amount was sent for a zero-decimal currency (XOF/XAF/NGN). | Send an integer amount. |
+| `limit_exceeded` | The payout exceeds the per-transaction, daily, or monthly limit. | Reduce the amount or contact support to raise the limit. |
+| `duplicate_within_window` | The same recipient, amount, currency, and network was submitted again within 60 seconds under a different idempotency key. | Don't resubmit; reuse the original `Idempotency-Key` instead. |
+| `frozen` | The transaction is on hold pending compliance/AML review. | Contact support. Do not retry automatically. |
+| `kyb_required` | The organization isn't KYB-approved, or its account is suspended/closed. | Complete KYB, or contact support if the account is suspended. |
+| `payin_unavailable` | The payin provider failed to process the request. | Retry using an idempotency key, with exponential backoff. |
+| `validation_error` | The request body failed validation (invalid amount, currency, phone number, etc. — see `details`). | Fix the field(s) listed in `details` and retry. |
+| `not_found` | The requested resource does not exist. | Verify the ID before retrying. |
+| `internal` | An unexpected server error occurred. | Retry later, or contact support if the issue persists. |
+
+## Best Practices
+
+<Info>
+  Always use the `code` field for programmatic handling. The `message` is intended for debugging and may change over time.
+</Info>
+
+<Warning>
+  When retrying failed requests, always include the same `Idempotency-Key` to prevent duplicate transactions.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Going live" icon="globe-pointer" href="/going-live">
+    Things to set to move from your sandbox account to live payments.
+  </Card>
+</CardGroup>

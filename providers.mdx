@@ -1,0 +1,211 @@
+---
+title: "Providers"
+---
+
+# Supported Payment Providers
+
+KryptaPay provides a unified API for processing payments and payouts across multiple payment providers. Instead of integrating with each provider individually, you integrate once with KryptaPay and gain access to a growing network of payment methods.
+
+## Supported Payment Methods
+
+<CardGroup cols={2}>
+  <Card title="Mobile Money" icon="mobile-screen-button">
+    Collect and send payments through leading Mobile Money providers across Africa.
+  </Card>
+
+  <Card title="Bank Transfer" icon="building-columns">
+    Accept and send bank transfers through supported banking partners.
+  </Card>
+
+  <Card title="Stablecoins" icon="coins">
+    Process payments using supported blockchain-based stablecoins.
+  </Card>
+</CardGroup>
+
+## Operations
+
+| Operation | Supported |
+| --- | --- |
+| Payins | ✅ |
+| Payouts | ✅ |
+| Refunds | ✅ |
+| Transaction Status | ✅ |
+| Webhooks | ✅ |
+
+---
+
+## Mobile Money
+
+Mobile Money enables customers to pay directly from their mobile wallet.
+
+### Typical Use Cases
+
+- Merchant collections
+- Customer withdrawals
+- Marketplace settlements
+- Subscription payments
+- Bill payments
+
+### Providers
+
+| Country | Provider | Network Code | Payins | Payouts | Status |
+| --- | --- | --- | :-: | :-: | --- |
+| Benin | MTN Money | `MTN_BJ` | ✅ | ✅ | Supported |
+| Benin | Moov Money | `MOOV_BJ` | ✅ | ✅ | Supported |
+| Burkina Faso | Orange Money | `ORANGE_BF` | ✅ | ✅ | Supported |
+| Burkina Faso | Moov Money | `MOOV_BF` | ✅ | ✅ | Supported |
+| Cameroon | MTN Money | `MTN_CM` | ✅ | ✅ | Supported |
+| Cameroon | Orange Money | `ORANGE_CM` | ✅ | ✅ | Supported |
+| Côte d'Ivoire | Orange Money | `ORANGE_CI` | ✅ | ✅ | Supported |
+| Côte d'Ivoire | MTN Mobile Money | `MTN_CI` | ✅ | ✅ | Supported |
+| Côte d'Ivoire | Moov Money | `MOOV_CI` | ✅ | ✅ | Supported |
+| Côte d'Ivoire | Wave | `WAVE_CI` | ✅ | ✅ | Supported |
+| Côte d'Ivoire | Djamo | `DJAMO_CI` | ✅ | ✅ | Supported |
+| Gabon | Airtel Money | `AIRTEL_GA` | ✅ | ✅ | Supported |
+| Ghana | MTN Money | `MTN_GH` | ✅ | ✅ | Supported |
+| Ghana | Telecel Cash | `AIRTELTIGO_GH`\* | ✅ | ✅ | Supported |
+| Nigeria | Opay | `OPAY_NG` | ✅ | ✅ | Supported |
+| Nigeria | MTN Money | `MOMO_NG` | ✅ | ✅ | Supported |
+| Nigeria | Airtel Money | `AIRTEL_NG` | ✅ | ✅ | Supported |
+| Mali | Orange Money | `ORANGE_ML` | ✅ | ✅ | Supported |
+| Republic of the Congo | MTN Money | `MTN_CG` | ✅ | ✅ | Supported |
+| Republic of the Congo | Airtel Money | `AIRTEL_CG` | ✅ | ✅ | Supported |
+| Democratic Republic of the Congo | Airtel Money | `AIRTEL_CD` | ✅ | ✅ | Supported |
+| Democratic Republic of the Congo | Orange Money | `ORANGE_CD` | ✅ | ✅ | Supported |
+| Democratic Republic of the Congo | M-Pesa | `VODACOM_CD`\* | ✅ | ✅ | Supported |
+| Senegal | Orange Money | `ORANGE_SN` | ✅ | ✅ | Supported |
+
+### Currencies
+
+| Currency | Name | Type | Region / Chain | Decimals |
+| --- | --- | --- | --- | --- |
+| `XOF` | West African CFA Franc | Fiat | Benin, Burkina Faso, Côte d'Ivoire, Mali, Senegal, Togo | 0 |
+| `XAF` | Central African CFA Franc | Fiat | Cameroon, Congo (Brazzaville), Gabon | 0 |
+| `NGN` | Nigerian Naira | Fiat | Nigeria | 0 |
+| `GHS` | Ghanaian Cedi | Fiat | Ghana | 2 |
+| `CDF` | Congolese Franc | Fiat | Democratic Republic of the Congo | 2 |
+
+---
+
+## Bank Transfers
+
+Bank transfers allow funds to move directly between bank accounts.
+
+### Typical Use Cases
+
+- Business payments
+- Supplier payouts
+- Salary payments
+- Account funding
+- High-value transactions
+
+### Countries
+
+| Country | Payins | Payouts | Status |
+| --- | :-: | :-: | --- |
+| Benin | ✅ | ✅ | Supported |
+| Burkina Faso | ✅ | ✅ | Supported |
+| Cameroon | ✅ | ✅ | Supported |
+| Côte d'Ivoire | ✅ | ✅ | Supported |
+| Gabon | ✅ | ✅ | Supported |
+| Ghana | ✅ | ✅ | Supported |
+| Nigeria | ✅ | ✅ | Supported |
+| Mali | ✅ | ✅ | Supported |
+| Republic of the Congo | ✅ | ✅ | Supported |
+| Democratic Republic of the Congo | ✅ | ✅ | Supported |
+| Senegal | ✅ | ✅ | Supported |
+| Togo | ✅ | ✅ | Supported |
+| Europe(zone Euro) | ✅ | ✅ | Supported |
+| Other part of the world(compte USD) | ✅ | ✅ | Supported |
+
+### Currencies
+
+| Currency | Name | Type | Region / Chain | Decimals |
+| --- | --- | --- | --- | --- |
+| `XOF` | West African CFA Franc | Fiat | Benin, Burkina Faso, Côte d'Ivoire, Mali, Senegal, Togo | 0 |
+| `XAF` | Central African CFA Franc | Fiat | Cameroon, Congo (Brazzaville), Gabon | 0 |
+| `NGN` | Nigerian Naira | Fiat | Nigeria | 0 |
+| `GHS` | Ghanaian Cedi | Fiat | Ghana | 2 |
+| `CDF` | Congolese Franc | Fiat | Democratic Republic of the Congo | 2 |
+| `EUR` | Euro | Fiat | European Union (SEPA) | 2 |
+| `USD` | US Dollar | Fiat | United States (ACH/wire) | 2 |
+
+---
+
+## Stablecoins
+
+Stablecoin payments enable near real-time transfers over supported blockchain networks.
+
+### Typical Use Cases
+
+- Cross-border payments
+- Treasury management
+- Merchant settlements
+- International payroll
+- Crypto on/off ramps
+
+### Currencies
+
+| Stablecoin | Network | Standard | Currency Code | Payins | Payouts | Status |
+| --- | --- | --- | --- | :-: | :-: | --- |
+| USDT | Ethereum | ERC-20 | `ETH` | ✅ | ✅ | Supported |
+| USDT | Tron | TRC-20 | `TRON` | ✅ | ✅ | Supported |
+| USDT | Polygon | Polygon | `POLYGON` | ✅ | ✅ | Supported |
+| USDC | Ethereum | ERC-20 | `ETH` | ✅ | ✅ | Supported |
+| USDC | Tron | TRC-20 | `TRON` | ✅ | ✅ | Supported |
+| USDC | Polygon | Polygon | `POLYGON` | ✅ | ✅ | Supported |
+
+---
+
+## Provider Availability
+
+The availability of payment methods depends on:
+
+- Country
+- Currency
+- Merchant account configuration
+- Regulatory requirements
+- Provider availability
+
+<Warning>
+  Not every provider supports every operation.
+</Warning>
+
+---
+
+## Unified API
+
+Regardless of the payment provider, all KryptaPay integrations use the same API conventions:
+
+- Consistent authentication
+- Standardized request and response formats
+- Unified error codes
+- Common transaction lifecycle
+- Idempotent write operations
+- Webhook notifications for asynchronous events
+
+This allows you to add new payment providers with minimal or no code changes.
+
+---
+
+## Next Steps
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Deposits" icon="inbox-arrow-down" href="/deposits">
+    Learn how to make a deposit.
+  </Card>
+
+  <Card title="Payouts" icon="inbox-arrow-up" href="/payouts">
+    Learn how to make a withdrawal.
+  </Card>
+
+  <Card title="Webhooks" icon="code" href="/webhooks">
+    Learn how to set up webhook to get notified in real time.
+  </Card>
+
+  <Card title="Verification and Compliance" icon="address-card" href="/compliance">
+    Learn how KryptaPay uses KYB and KYC verification to provide secure, transparent, and trusted payment services.
+  </Card>
+</CardGroup>

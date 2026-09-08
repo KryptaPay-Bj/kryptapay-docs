@@ -1,0 +1,45 @@
+---
+title: "Core Concepts"
+---
+
+Understand the main building blocks of KryptaPay so you can pick the right integration path.
+
+## Payins
+
+This module allows you to initiate and centralize fundraising through three major channels: Mobile Money requests (USSD Push in 9 countries), local bank transfers, and the issuance of permanent virtual accounts (SEPA IBAN and USD accounts).
+
+## Payouts
+
+The disbursement API routes your outgoing funds to the most suitable channel: Mobile Money wallets, bank accounts (local, SEPA, SWIFT) or cryptographic addresses (USDC/USDT stablecoins on Ethereum, Polygon, Tron).
+
+## Changes
+
+Query our exchange engine to obtain real-time quotes and perform immediate conversions between your different portfolios (fiat/fiat or fiat/crypto pairs).
+
+## Webhooks
+
+Abonnez vos serveurs à nos webhooks pour recevoir des requêtes HTTPS dès qu'un événement survient sur votre compte (paiement réussi, échec, réception de fonds sur un IBAN virtuel, validation d'un bénéficiaire).
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Providers" icon="diagram-subtask" href="/providers">
+    Find the list of all available providers, their currency.
+  </Card>
+
+  <Card title="Deposits" icon="inbox-arrow-down" href="/deposits">
+    Learn how to make a deposit.
+  </Card>
+
+  <Card title="Payouts" icon="inbox-arrow-up" href="/payouts">
+    Learn how to make a withdrawal.
+  </Card>
+
+  <Card title="Webhooks" icon="code" href="/webhooks">
+    Learn how to set up webhook to get notified in real time.
+  </Card>
+
+  <Card title="Verification and Compliance" icon="address-card" href="/compliance">
+    Learn how KryptaPay uses KYB and KYC verification to provide secure, transparent, and trusted payment services.
+  </Card>
+</CardGroup>
