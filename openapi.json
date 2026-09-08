@@ -308,18 +308,6 @@
                           ],
                           "nullable": true
                         },
-                        "provider": {
-                          "type": "string",
-                          "enum": [
-                            "BRIDGE",
-                            "PAL_AFRICA",
-                            "MBIYOPAY",
-                            "INTERNAL",
-                            "PAYDUNYA",
-                            "PAYFONTE"
-                          ],
-                          "nullable": true
-                        },
                         "description": { "type": "string", "nullable": true },
                         "recipient": {
                           "type": "object",
@@ -400,7 +388,6 @@
                         "currency",
                         "fee",
                         "network",
-                        "provider",
                         "description",
                         "recipient",
                         "providerRef",
@@ -626,18 +613,6 @@
                                 ],
                                 "nullable": true
                               },
-                              "provider": {
-                                "type": "string",
-                                "enum": [
-                                  "BRIDGE",
-                                  "PAL_AFRICA",
-                                  "MBIYOPAY",
-                                  "INTERNAL",
-                                  "PAYDUNYA",
-                                  "PAYFONTE"
-                                ],
-                                "nullable": true
-                              },
                               "description": {
                                 "type": "string",
                                 "nullable": true
@@ -750,7 +725,6 @@
                               "currency",
                               "fee",
                               "network",
-                              "provider",
                               "description",
                               "recipient",
                               "providerRef",
@@ -2029,17 +2003,6 @@
                         "checkoutUrl": { "type": "string", "nullable": true },
                         "checkoutToken": { "type": "string", "nullable": true },
                         "expiresInSec": { "type": "integer" },
-                        "provider": {
-                          "type": "string",
-                          "enum": [
-                            "BRIDGE",
-                            "PAL_AFRICA",
-                            "MBIYOPAY",
-                            "INTERNAL",
-                            "PAYDUNYA",
-                            "PAYFONTE"
-                          ]
-                        },
                         "providerMode": {
                           "type": "string",
                           "enum": ["live", "mock", "disabled"]
@@ -2053,7 +2016,6 @@
                         "checkoutUrl",
                         "checkoutToken",
                         "expiresInSec",
-                        "provider",
                         "providerMode"
                       ],
                       "additionalProperties": false
