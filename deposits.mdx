@@ -74,7 +74,7 @@ Request body:
 ```
 
 <Info>
-  `customer.msisdn` must be in international format — digits only or with a leading `+`, country code followed by the subscriber number (e.g. `22997000000` or `+22997000000`). It's required whenever `network` is a mobile money network: every operator needs it to charge the customer. You can omit both `network` and `msisdn` if the customer will choose their payment method on a hosted checkout page.
+  `customer.msisdn` accepts either local or international format (e.g. `97000000` or `22997000000`/`+22997000000`). It's required whenever `network` is a mobile money network: every operator needs it to charge the customer. You can omit both `network` and `msisdn` if the customer will choose their payment method on a hosted checkout page.
 </Info>
 
 ---

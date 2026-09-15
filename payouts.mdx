@@ -62,7 +62,7 @@ Which `recipient` fields are required depends on `network`:
 
 | Network type | Required fields | Example |
 | --- | --- | --- |
-| Mobile money (e.g. `MTN_BJ`) | `msisdn` | `22997000000` or `+22997000000` (international format) |
+| Mobile money (e.g. `MTN_BJ`) | `msisdn` | `97000000`, `22997000000`, or `+22997000000` (local or international format) |
 | `BANK_NGN` | `accountNumber` + `bankCode` | Nigerian NUBAN account number + bank code |
 | Crypto (`ETH`, `POLYGON`, `TRON`) | `address` | Wallet address on that chain |
 | Other bank rails (`BANK_XOF`, `BANK_XAF`, `BANK_GHS`, `BANK_CDF`, `BANK_EUR`, `BANK_USD`) | At least one recipient identifier | Settled manually by KryptaPay today |
