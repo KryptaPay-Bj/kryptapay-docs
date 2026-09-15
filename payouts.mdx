@@ -58,23 +58,48 @@ Idempotency-Key: 93bbdcb4-c63d-4af9-b630-9af9cc2d56d7
 
 Request body:
 
+Which `recipient` fields are required depends on `network`:
+
+| Network type | Required fields | Example |
+| --- | --- | --- |
+| Mobile money (e.g. `MTN_BJ`) | `msisdn` | `22997000000` or `+22997000000` (international format) |
+| `BANK_NGN` | `accountNumber` + `bankCode` | Nigerian NUBAN account number + bank code |
+| Crypto (`ETH`, `POLYGON`, `TRON`) | `address` | Wallet address on that chain |
+| Other bank rails (`BANK_XOF`, `BANK_XAF`, `BANK_GHS`, `BANK_CDF`, `BANK_EUR`, `BANK_USD`) | At least one recipient identifier | Settled manually by KryptaPay today |
+
+<Warning>
+  `recipient.bankName` and `recipient.bankId` are accepted but currently informational only — no payment provider reads them. Use `recipient.bankCode` for the bank identifier.
+</Warning>
+
+Mobile money example:
+
 ```json
 {
   "amount": "300",
+  "currency": "XOF",
   "network": "MTN_BJ",
   "recipient": {
-    "msisdn": "0197000000",
-    "iban": "...",
-    "address": "...",
-    "fullName": "John Doe",
-    "customerId": "...",
-    "bankName": "...",
-    "bankId": "...",
-    "accountNumber": "..."
+    "msisdn": "22997000000",
+    "fullName": "John Doe"
   },
   "description": "...",
   "category": "...",
   "counterpartyId": "..."
+}
+```
+
+`BANK_NGN` example:
+
+```json
+{
+  "amount": "5000",
+  "currency": "NGN",
+  "network": "BANK_NGN",
+  "recipient": {
+    "accountNumber": "0123456789",
+    "bankCode": "044",
+    "fullName": "John Doe"
+  }
 }
 ```
 
@@ -92,7 +117,7 @@ Request body:
     "fee": "...",
     "description": "...",
     "recipient": {
-      "msisdn": "0197000000",
+      "msisdn": "22997000000",
       "iban": "...",
       "address": "...",
       "chain": "ETH"
@@ -174,7 +199,7 @@ Example response:
     "fee": "...",
     "description": "...",
     "recipient": {
-      "msisdn": "0197000000",
+      "msisdn": "22997000000",
       "iban": "...",
       "address": "..."
     },
@@ -216,7 +241,7 @@ A payout may fail for several reasons, including:
 - Compliance or fraud checks failed.
 - Recipient account is blocked or inactive.
 
-See the **Transaction Failure Codes** guide for the complete list of failure codes and recommended actions.
+See [Testing → Failure Codes](/testing#failure-codes) for the complete list of failure codes and recommended actions.
 
 ---
 

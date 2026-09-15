@@ -65,13 +65,17 @@ Request body:
   "network": "MTN_BJ",
   "customer": {
     "fullName": "John Doe",
-    "msisdn": "0197000000",
+    "msisdn": "22997000000",
     "email": "johndoe@example.com"
   },
   "redirectUrl": "https://example.com",
   "expiresInSec": 60
 }
 ```
+
+<Info>
+  `customer.msisdn` must be in international format — digits only or with a leading `+`, country code followed by the subscriber number (e.g. `22997000000` or `+22997000000`). It's required whenever `network` is a mobile money network: every operator needs it to charge the customer. You can omit both `network` and `msisdn` if the customer will choose their payment method on a hosted checkout page.
+</Info>
 
 ---
 

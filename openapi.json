@@ -110,8 +110,8 @@
                     "properties": {
                       "msisdn": {
                         "type": "string",
-                        "minLength": 8,
-                        "maxLength": 20
+                        "pattern": "^\\+?[1-9]\\d{9,14}$",
+                        "description": "International MSISDN, digits only or with a leading \"+\" — country code + subscriber number, e.g. \"22997000000\" or \"+22997000000\". Required for mobile money networks."
                       },
                       "iban": {
                         "type": "string",
@@ -172,12 +172,27 @@
                       },
                       "fullName": { "type": "string", "maxLength": 180 },
                       "customerId": { "type": "string", "maxLength": 120 },
-                      "bankName": { "type": "string", "maxLength": 120 },
-                      "bankId": {
-                        "anyOf": [{ "type": "string" }, { "type": "number" }]
+                      "bankName": {
+                        "type": "string",
+                        "maxLength": 120,
+                        "description": "Informational only today — no payment provider reads this field. Kept for display / forward-compatibility."
                       },
-                      "accountNumber": { "type": "string", "maxLength": 64 }
+                      "bankId": {
+                        "anyOf": [{ "type": "string" }, { "type": "number" }],
+                        "description": "Informational only today — no payment provider reads this field. Use bankCode instead."
+                      },
+                      "bankCode": {
+                        "type": "string",
+                        "maxLength": 20,
+                        "description": "Bank code identifying the recipient's bank. Required for BANK_NGN (along with accountNumber) — this is the field payment providers actually read for Nigerian bank transfers."
+                      },
+                      "accountNumber": {
+                        "type": "string",
+                        "maxLength": 64,
+                        "description": "Recipient bank account number (e.g. Nigerian NUBAN). Required for BANK_NGN, along with bankCode."
+                      }
                     },
+                    "description": "Which fields are required depends on `network`: mobile money networks require msisdn; BANK_NGN requires accountNumber and bankCode; crypto networks (ETH/POLYGON/TRON) require address. Every other bank rail (BANK_XOF, BANK_XAF, BANK_GHS, BANK_CDF, BANK_EUR, BANK_USD) is settled manually by KryptaPay today, so at least one recipient identifier is required but no specific field is enforced yet.",
                     "additionalProperties": false
                   },
                   "description": { "type": "string", "maxLength": 500 },
@@ -1884,11 +1899,12 @@
                       "fullName": { "type": "string", "maxLength": 180 },
                       "msisdn": {
                         "type": "string",
-                        "minLength": 8,
-                        "maxLength": 20
+                        "pattern": "^\\+?[1-9]\\d{9,14}$",
+                        "description": "International MSISDN, digits only or with a leading \"+\" — country code + subscriber number, e.g. \"22997000000\" or \"+22997000000\". Required whenever `network` is a mobile money network."
                       },
                       "email": { "type": "string", "format": "email" }
                     },
+                    "description": "customer.msisdn is required whenever `network` is a mobile money network (every operator requires it to actually charge the customer). It can be omitted only when `network` is not yet chosen (selected later on a hosted checkout page).",
                     "additionalProperties": false
                   },
                   "redirectUrl": { "type": "string", "format": "uri" },
