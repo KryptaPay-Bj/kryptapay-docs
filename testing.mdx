@@ -12,15 +12,19 @@ The API uses standard HTTP status codes.
 | --- | --- |
 | `200` | Success |
 | `201` | Resource created |
-| `400` | Bad request |
+| `400` | Malformed request (e.g. invalid JSON body) |
 | `401` | Unauthorized |
 | `403` | Forbidden |
 | `404` | Resource not found |
 | `409` | Conflict |
-| `422` | Validation error |
+| `422` | Validation error — the request body didn't match the expected shape or business rules |
 | `429` | Too many requests |
 | `500` | Internal server error |
 | `502` | Bad gateway |
+
+<Info>
+  A request body that fails schema validation (missing/invalid field, wrong type, an unmet cross-field rule) always returns `422` with `error.code: "validation_error"` — `400` is reserved for requests that never even reach body validation, like unparseable JSON.
+</Info>
 
 ## Error Handling
 
@@ -47,6 +51,24 @@ Example error response body:
   "error": {
     "code": "amount_below_min",
     "message": "Le montant minimum pour un dépôt par mobile money est 300 XOF."
+  }
+}
+```
+
+`validation_error` carries extra structure: the top-level `message` names the first failing field, and `details.fieldErrors` lists every field that failed, keyed by path.
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "validation_error",
+    "message": "customer.msisdn: customer.msisdn is required for mobile money network MTN_BJ",
+    "details": {
+      "formErrors": [],
+      "fieldErrors": {
+        "customer.msisdn": ["customer.msisdn is required for mobile money network MTN_BJ"]
+      }
+    }
   }
 }
 ```
