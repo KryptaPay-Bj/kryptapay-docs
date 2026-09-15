@@ -110,8 +110,7 @@
                     "properties": {
                       "msisdn": {
                         "type": "string",
-                        "pattern": "^\\+?[1-9]\\d{9,14}$",
-                        "description": "International MSISDN, digits only or with a leading \"+\" — country code + subscriber number, e.g. \"22997000000\" or \"+22997000000\". Required for mobile money networks."
+                        "description": "MSISDN, local or international format (digits only or with a leading \"+\"), e.g. \"97000000\", \"22997000000\", or \"+22997000000\". Required for mobile money networks."
                       },
                       "iban": {
                         "type": "string",
@@ -1899,8 +1898,7 @@
                       "fullName": { "type": "string", "maxLength": 180 },
                       "msisdn": {
                         "type": "string",
-                        "pattern": "^\\+?[1-9]\\d{9,14}$",
-                        "description": "International MSISDN, digits only or with a leading \"+\" — country code + subscriber number, e.g. \"22997000000\" or \"+22997000000\". Required whenever `network` is a mobile money network."
+                        "description": "MSISDN, local or international format (digits only or with a leading \"+\"), e.g. \"97000000\", \"22997000000\", or \"+22997000000\". Required whenever `network` is a mobile money network."
                       },
                       "email": { "type": "string", "format": "email" }
                     },
