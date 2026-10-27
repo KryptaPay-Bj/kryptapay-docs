@@ -1888,9 +1888,14 @@
       "post": {
         "operationId": "convertFx",
         "summary": "Convert between wallets",
-        "description": "Executes a conversion from your `from` wallet to your `to` wallet at the current rate. Both wallets must exist.\n\n**API key scope:** `fx:write`",
+        "description": "Executes a conversion from your `from` wallet to your `to` wallet at the current rate. Both wallets must exist.\n\nSend an `Idempotency-Key`: retrying with the same key returns the original conversion (`200`) instead of converting twice.\n\n**API key scope:** `fx:write`",
         "tags": [
           "FX"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
         ],
         "requestBody": {
           "content": {
@@ -1932,8 +1937,90 @@
           "required": true
         },
         "responses": {
-          "201": {
+          "200": {
             "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "reference": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string"
+                        },
+                        "fromCurrency": {
+                          "$ref": "#/components/schemas/Currency"
+                        },
+                        "toCurrency": {
+                          "$ref": "#/components/schemas/Currency"
+                        },
+                        "fromAmount": {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                        },
+                        "toAmount": {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                        },
+                        "midRate": {
+                          "type": "string"
+                        },
+                        "appliedRate": {
+                          "type": "string"
+                        },
+                        "spreadBps": {
+                          "type": "number"
+                        },
+                        "settledAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "reference",
+                        "status",
+                        "fromCurrency",
+                        "toCurrency",
+                        "fromAmount",
+                        "toAmount",
+                        "midRate",
+                        "appliedRate",
+                        "spreadBps",
+                        "settledAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Default Response",
             "content": {
               "application/json": {
                 "schema": {

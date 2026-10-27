@@ -60,18 +60,21 @@ Keep requesting until `nextCursor` is `null`.
 
 ## Idempotency
 
-Network failures happen: a request can succeed on our side while your client times out. Send an `Idempotency-Key` header on **Create a payout** so retries are safe:
+Network failures happen: a request can succeed on our side while your client times out. Send an `Idempotency-Key` header on the requests that move money so retries are safe:
+
+- [Create a payout](/api-reference/payouts/create)
+- [Convert between wallets](/api-reference/fx/convert)
 
 ```http
 Idempotency-Key: 4b17ddc6-4d7f-4d3e-a7d5-62e3c7f2d18d
 ```
 
-- Generate a new UUID per payout and store it with your record **before** calling the API.
-- Retrying with the same key returns the original payout (`200`) instead of creating a second one.
+- Generate a new UUID per operation and store it with your record **before** calling the API.
+- Retrying with the same key returns the original payout or conversion (`200`) instead of creating a second one.
 - As an extra safety net, an identical payout (same recipient, amount, currency and network) sent within 60 seconds **with a different or no key** is rejected with `409 duplicate_within_window`. `error.details.existingReference` points to the first payout.
 
 <Note>
-  Idempotency keys are enforced in production only. In sandbox every request creates a new simulated payout.
+  Sandbox payouts are simulated and don't check idempotency keys: every request creates a new one.
 </Note>
 
 ## Request IDs

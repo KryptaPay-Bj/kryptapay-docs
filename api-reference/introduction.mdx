@@ -24,7 +24,7 @@ curl https://staging.api.krypta-pay.com/v1/wallets \
 - Responses are wrapped in `{ "ok": true, "data": … }` or `{ "ok": false, "error": { "code", "message" } }`.
 - Amounts are decimal strings in major units (`"1500"`, `"12.50"`).
 - Lists are cursor-paginated with `limit`, `cursor` and `nextCursor`.
-- Payouts accept an `Idempotency-Key` header for safe retries.
+- Payouts and conversions accept an `Idempotency-Key` header for safe retries.
 
 Details in [Requests and responses](/requests-and-responses) and [Errors](/errors).
 

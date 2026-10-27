@@ -19,7 +19,7 @@ Production uses a different base URL and different keys. Nothing from the sandbo
   - Every webhook signature is verified on the raw body.
   - Webhook handling is idempotent: the same `event_id` processed twice has no extra effect.
   - Orders are fulfilled only after a `COMPLETED` status, never from a redirect alone.
-  - Every payout sends an `Idempotency-Key`, stored before the request.
+  - Every payout and conversion sends an `Idempotency-Key`, stored before the request.
   - Errors are handled by `error.code`, not by message text.
   - `429` and `5xx` are retried with exponential backoff; other errors are not.
   - The `X-Request-Id` response header is logged, so you can quote it to support.
