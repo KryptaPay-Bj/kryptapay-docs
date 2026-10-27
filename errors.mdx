@@ -83,3 +83,4 @@ A body that fails validation (missing or invalid field, wrong type, unmet cross-
 - Retry only on `429` and `5xx`, with exponential backoff (for example 1 s, 2 s, 4 s… capped at 1 minute).
 - For payouts, always resend the **same** `Idempotency-Key` so a retry can never pay twice. See [Idempotency](/requests-and-responses#idempotency).
 - If a request times out, don't assume it failed: look the resource up (or rely on its webhook) before trying again.
+- When contacting support about an error, include the response's `X-Request-Id` header.

@@ -22,6 +22,7 @@ Production uses a different base URL and different keys. Nothing from the sandbo
   - Every payout sends an `Idempotency-Key`, stored before the request.
   - Errors are handled by `error.code`, not by message text.
   - `429` and `5xx` are retried with exponential backoff; other errors are not.
+  - The `X-Request-Id` response header is logged, so you can quote it to support.
   - Networks shown to customers come from [List available networks](/api-reference/networks/list).
   - You've run every flow you use (payins, payouts, conversions) end to end in sandbox.
 </Check>

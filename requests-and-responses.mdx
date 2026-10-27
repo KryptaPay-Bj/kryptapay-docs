@@ -74,6 +74,12 @@ Idempotency-Key: 4b17ddc6-4d7f-4d3e-a7d5-62e3c7f2d18d
   Idempotency keys are enforced in production only. In sandbox every request creates a new simulated payout.
 </Note>
 
+## Request IDs
+
+Every response has an `X-Request-Id` header. Log it next to your own records, and include it when you contact support — it lets us find the exact request.
+
+You can also send your own `X-Request-Id` (8 to 128 characters: letters, digits, `.`, `_`, `:`, `-`). If it's valid, we use it as the request ID and echo it back, so you can correlate requests with your own logs. Otherwise we generate one.
+
 ## Rate limits
 
 Each API key can make **120 requests per minute**. Every response carries the current state:
