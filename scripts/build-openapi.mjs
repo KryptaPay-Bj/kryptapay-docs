@@ -115,7 +115,7 @@ const errorResponses = {
   409: ['Conflict', 'The resource is not in a state that allows this action.', 'bad_status', 'Cannot cancel in status PROCESSING'],
   422: ['ValidationError', 'The request failed validation or a business rule. See `error.code` and, for `validation_error`, `error.details.fieldErrors`.', 'validation_error', 'amount: Invalid amount'],
   502: ['UpstreamUnavailable', 'The payment operator could not process the request. Retry with backoff or use another network.', 'payin_unavailable', 'Le paiement Mobile Money est momentanément indisponible.'],
-  429: ['RateLimited', 'Too many requests. Wait for the number of seconds in the `retry-after` header.', 'error', 'Rate limit exceeded, retry in 1 minute'],
+  429: ['RateLimited', 'Too many requests. Wait for the number of seconds in the `retry-after` header.', 'rate_limited', 'Rate limit exceeded, retry in 1 minute'],
 }
 
 function buildComponents(enums) {

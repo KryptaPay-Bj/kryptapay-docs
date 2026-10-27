@@ -75,6 +75,7 @@ A body that fails validation (missing or invalid field, wrong type, unmet cross-
 | `duplicate_within_window` | 409 | Same recipient, amount, currency and network within 60 seconds under a different or missing `Idempotency-Key`. | Check `details.existingReference`; retry with the original `Idempotency-Key` instead. |
 | `otp_failed` | 422 | Wrong payin code, or the operator refused the payment. | Let the customer generate a new code and retry. |
 | `otp_unsupported` | 422 | The payin doesn't use a confirmation code. | Don't call confirm-otp unless `otpRequired` was true. |
+| `rate_limited` | 429 | Too many requests for this key. | Wait `retry-after` seconds, then retry. |
 | `payin_unavailable` | 502 | The operator couldn't start the payin. | Retry with backoff, or use another network. |
 | `internal` | 500 | Unexpected server error. | Retry later; contact support if it persists. |
 

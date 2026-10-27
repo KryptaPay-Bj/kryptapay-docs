@@ -90,4 +90,4 @@ Each API key can make **120 requests per minute**. Every response carries the cu
 | `x-ratelimit-remaining` | Requests left in the window |
 | `x-ratelimit-reset` | Seconds until the window resets |
 
-Above the limit you get `429` with a `retry-after` header (seconds). Wait that long before retrying. Prefer [webhooks](/webhooks) over polling to stay well under the limit.
+Above the limit you get `429` with `error.code: "rate_limited"` and a `retry-after` header (seconds). Wait that long before retrying. Prefer [webhooks](/webhooks) over polling to stay well under the limit.
