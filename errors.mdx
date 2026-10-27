@@ -1,0 +1,87 @@
+---
+title: "Errors"
+description: "Error format, HTTP statuses and the codes to branch on."
+---
+
+Every error uses the same envelope. Branch on `error.code` — it is stable. `error.message` is for humans and may change.
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "amount_below_min",
+    "message": "Le montant minimum pour un dépôt mobile money est de 300 XOF.",
+    "details": { "min": 300, "currency": "XOF" }
+  }
+}
+```
+
+<Note>
+  Some `message` values are in French. Never parse or display them as-is to end users — map `code` to your own wording instead.
+</Note>
+
+## HTTP statuses
+
+| Status | Meaning | Retry? |
+| --- | --- | --- |
+| `200` / `201` | Success / resource created | — |
+| `400` | Malformed request, e.g. invalid JSON | No — fix the request |
+| `401` | Missing, invalid or expired API key | No — check the key |
+| `403` | Key lacks a scope, or the account isn't KYB-approved | No |
+| `404` | Resource not found | No |
+| `409` | Conflict: wrong state for the action, or a duplicate payout | No |
+| `413` | Request body larger than 1 MB | No |
+| `422` | Validation error or business rule (see codes below) | No — fix the request |
+| `429` | Rate limit exceeded | Yes — after `retry-after` seconds |
+| `5xx` | Server or upstream error | Yes — with backoff |
+
+## Validation errors
+
+A body that fails validation (missing or invalid field, wrong type, unmet cross-field rule) returns `422` with `code: "validation_error"`. `message` names the first failing field; `details.fieldErrors` lists every failing field by path.
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "validation_error",
+    "message": "customer.msisdn: customer.msisdn is required for mobile money network MTN_BJ",
+    "details": {
+      "formErrors": [],
+      "fieldErrors": {
+        "customer.msisdn": ["customer.msisdn is required for mobile money network MTN_BJ"]
+      }
+    }
+  }
+}
+```
+
+## Error codes
+
+| Code | Status | What happened | What to do |
+| --- | --- | --- | --- |
+| `unauthorized` | 401 | The API key is missing, invalid, revoked or expired. | Check the key and environment. |
+| `insufficient_scope` | 403 | The key doesn't have the scope this action needs. | Use a key with the right [scope](/authentication#scopes). |
+| `kyb_required` | 403 | The organization isn't KYB-approved, or is suspended or closed. | Complete KYB, or contact support. |
+| `not_found` | 404 | The resource doesn't exist or belongs to another account. | Check the id or reference. |
+| `bad_status` | 409 (422 on confirm-otp) | The resource can't change state, e.g. cancelling a payout that is already processing. | Fetch it to see its current status. |
+| `validation_error` | 422 | The body failed validation — see `details.fieldErrors`. | Fix the listed fields. |
+| `amount_below_min` | 422 | Below the Mobile Money minimum (300, or 700 for NGN). | Increase the amount. |
+| `amount_decimal_not_allowed` | 422 | Decimal amount for a zero-decimal currency (XOF, XAF, NGN). | Send an integer amount. |
+| `network_unavailable` | 422 | The operator is temporarily under maintenance. | Retry later or use another network. |
+| `no_wallet` | 422 | No active wallet in this currency. | Contact support to open one. |
+| `insufficient_funds` | 422 | Not enough available balance for the payout. | Top up the wallet and retry. |
+| `insufficient_funds_with_fee` | 422 | The balance doesn't cover amount + fee. | Top up, or use [Quote a fee](/api-reference/fees/quote) to get `maxSendable`. |
+| `limit_exceeded` | 422 | Per-transaction, daily or monthly limit reached. | Reduce the amount or ask support to raise the limit. |
+| `duplicate_within_window` | 409 | Same recipient, amount, currency and network within 60 seconds under a different or missing `Idempotency-Key`. | Check `details.existingReference`; retry with the original `Idempotency-Key` instead. |
+| `otp_failed` | 422 | Wrong payin code, or the operator refused the payment. | Let the customer generate a new code and retry. |
+| `otp_unsupported` | 422 | The payin doesn't use a confirmation code. | Don't call confirm-otp unless `otpRequired` was true. |
+| `rate_limited` | 429 | Too many requests for this key. | Wait `retry-after` seconds, then retry. |
+| `payin_unavailable` | 502 | The operator couldn't start the payin. | Retry with backoff, or use another network. |
+| `internal` | 500 | Unexpected server error. | Retry later; contact support if it persists. |
+
+## Retrying safely
+
+- Retry only on `429` and `5xx`, with exponential backoff (for example 1 s, 2 s, 4 s… capped at 1 minute).
+- For payouts and conversions, always resend the **same** `Idempotency-Key` so a retry can never move money twice. See [Idempotency](/requests-and-responses#idempotency).
+- If a request times out, don't assume it failed: look the resource up (or rely on its webhook) before trying again.
+- When contacting support about an error, include the response's `X-Request-Id` header.

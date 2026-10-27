@@ -1,0 +1,64 @@
+---
+title: "Authentication"
+description: "API keys, environments and scopes."
+---
+
+Every request is authenticated with a secret API key sent as a bearer token:
+
+```http
+Authorization: Bearer kp_sandbox_...
+```
+
+Requests without a valid key return `401` with `error.code: "unauthorized"`.
+
+## Environments
+
+Sandbox and Production are fully separate: keys, balances, transactions and webhook endpoints never cross over.
+
+| Environment | Base URL | Key prefix |
+| --- | --- | --- |
+| Sandbox | `https://staging.api.krypta-pay.com` | `kp_sandbox_` |
+| Production | `https://api.krypta-pay.com` | `kp_live_` |
+
+<Warning>
+  Sandbox keys exist only on the sandbox base URL, and live keys only on production.
+</Warning>
+
+### How the sandbox behaves
+
+Sandbox runs the same validation as production — invalid fields, unsupported networks or amounts below the minimum are rejected the same way — but payments are simulated:
+
+- Payins and payouts complete immediately with status `COMPLETED`. Their `*_CREATED` and `*_RECEIVED` / `*_COMPLETED` webhooks are sent right away.
+- No operator, bank or blockchain is contacted, and no one is charged or paid.
+- Sandbox payments don't change wallet balances.
+- Your organization must still be KYB-approved.
+
+## Creating keys
+
+Create keys in the dashboard under **Developers → API keys**. For each key you choose:
+
+- **Environment** — `sandbox` or `live`.
+- **Scopes** — what the key may do (see below).
+- **Expiry** — optional, from 1 to 365 days.
+
+The secret is displayed **once**. KryptaPay stores only a hash, so a lost key cannot be recovered — revoke it and create a new one.
+
+## Scopes
+
+Give each integration the smallest set of scopes it needs. Any valid key can read data; scopes control actions that move money.
+
+| Scope | Allows |
+| --- | --- |
+| `payins:write` | Create and confirm payins |
+| `payouts:write` | Create and cancel payouts |
+| `fx:write` | Execute currency conversions |
+| `*` | Everything, including account administration |
+
+A key without the scope required by an action gets `403` with `error.code: "insufficient_scope"`. The scope each endpoint needs is shown in the [API reference](/api-reference/introduction).
+
+## Keeping keys safe
+
+- Call the API from your server only. Never ship a secret key in a web page or mobile app.
+- Store keys in a secret manager or environment variables, not in source control.
+- Use separate keys per service so you can revoke one without affecting others.
+- Rotate keys periodically and revoke unused ones in the dashboard.

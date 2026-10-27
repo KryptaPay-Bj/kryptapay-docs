@@ -1,0 +1,154 @@
+---
+title: "Collect payments"
+description: "Charge customers by Mobile Money and confirm the payment."
+---
+
+A **payin** collects money from a customer's Mobile Money wallet into your wallet. You ask the customer for their network and phone number in your own interface, then [create the payin](/api-reference/payins/create): KryptaPay charges the wallet directly.
+
+## 1. Create the payin
+
+```bash
+curl https://staging.api.krypta-pay.com/v1/payins/checkout \
+  -H "Authorization: Bearer $KRYPTAPAY_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": "5000",
+    "currency": "XOF",
+    "network": "MTN_BJ",
+    "customer": {
+      "fullName": "Awa Koné",
+      "msisdn": "22997000000",
+      "email": "awa@example.com"
+    },
+    "redirectUrl": "https://example.com/orders/1042",
+    "expiresInSec": 900
+  }'
+```
+
+```json
+{
+  "ok": true,
+  "data": {
+    "reference": "tx_3Jk9QwErTy7uIoPa2Sd",
+    "status": "PENDING",
+    "amount": "5000",
+    "currency": "XOF",
+    "checkoutUrl": null,
+    "expiresInSec": 900,
+    "otpRequired": false,
+    "otpInstructions": null
+  }
+}
+```
+
+Save the `reference` with your order. A `201` means the payin was **started**, not that the customer has paid.
+
+<Info>
+  `network` and `customer.msisdn` are required. The number accepts local or international format (`97000000`, `22997000000` or `+22997000000`).
+</Info>
+
+**Rules to know**
+
+- Minimum Mobile Money amount: 300 (700 for NGN).
+- XOF, XAF and NGN amounts must be whole numbers.
+- `expiresInSec` ranges from 60 to 86400 seconds.
+- Check [List available networks](/api-reference/networks/list) before showing networks to customers: operators are occasionally under maintenance (`network_unavailable`).
+
+## 2. The customer approves
+
+What the customer does next depends on the operator. Read the create response to know which case you're in:
+
+| Response | Operators | What to do |
+| --- | --- | --- |
+| `checkoutUrl` is `null`, `otpRequired` is `false` | Most operators (MTN, Moov, Airtel…) | Nothing — the customer gets a prompt on their phone and approves with their PIN. Show a "check your phone" message. |
+| `checkoutUrl` is set | e.g. Wave, Djamo, Orange Money Senegal | Redirect the customer to `checkoutUrl` to approve in the operator's app or page. They come back to your `redirectUrl`. |
+| `otpRequired` is `true` | Orange Money Côte d'Ivoire and Burkina Faso | Collect a code from the customer — see below. |
+
+The payin stays `PENDING` or `PROCESSING` meanwhile.
+
+### Networks that need a code
+
+Some operators — currently Orange Money Côte d'Ivoire (`ORANGE_CI`) and Burkina Faso (`ORANGE_BF`) — don't send a prompt. Instead, the customer generates a one-time code on their phone. In that case the create response has `otpRequired: true`:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "reference": "tx_3Jk9QwErTy7uIoPa2Sd",
+    "status": "PENDING",
+    "otpRequired": true,
+    "otpInstructions": "Composez #144*82# puis choisissez l'option 2 pour obtenir votre code de paiement Orange Money."
+  }
+}
+```
+
+1. Show `otpInstructions` to the customer and ask for the code. The text is in French, written for the customer, so show it as-is.
+2. Send it with [Confirm a payin with a code](/api-reference/payins/confirm-otp):
+
+   ```bash
+   curl https://api.krypta-pay.com/v1/payins/tx_3Jk9QwErTy7uIoPa2Sd/confirm-otp \
+     -H "Authorization: Bearer $KRYPTAPAY_API_KEY" \
+     -H "Content-Type: application/json" \
+     -d '{ "otp": "482913" }'
+   ```
+
+3. The payin moves to `PROCESSING`; continue with the webhook below.
+
+If you get `otp_failed`, the code was wrong or the operator refused the payment: let the customer generate a new code and try again.
+
+<Note>
+  Sandbox payins complete immediately and never ask for a code.
+</Note>
+
+## 3. Receive the webhook
+
+When the payin settles you receive `PAYIN_RECEIVED` or `PAYIN_FAILED`:
+
+```json
+{
+  "event_id": "evt_8Kd02LmQpWz7Yx3NcVb5HtRe",
+  "event_type": "PAYIN_RECEIVED",
+  "created_at": "2026-10-27T10:16:05.000Z",
+  "data": {
+    "transaction_id": "cmgx2k1qv0003s60f4e5r6t7y",
+    "reference": "tx_3Jk9QwErTy7uIoPa2Sd",
+    "amount": "5000",
+    "currency": "XOF",
+    "network": "MTN_BJ",
+    "status": "COMPLETED"
+  }
+}
+```
+
+See [Webhooks](/webhooks) to verify the signature.
+
+## 4. Confirm before fulfilling
+
+Before you ship goods or credit a user, confirm the status from the API:
+
+```bash
+curl https://staging.api.krypta-pay.com/v1/payins/tx_3Jk9QwErTy7uIoPa2Sd \
+  -H "Authorization: Bearer $KRYPTAPAY_API_KEY"
+```
+
+Fulfil only when `status` is `COMPLETED`, and only once per `reference` — webhooks can be delivered more than once.
+
+## Statuses
+
+| Status | Meaning | Final |
+| --- | --- | :-: |
+| `PENDING` | Created, waiting for the customer. | |
+| `PROCESSING` | The operator is processing the payment. | |
+| `COMPLETED` | Funds received and credited to your wallet. | ✅ |
+| `FAILED` | The payment did not go through (declined, timed out, insufficient customer balance…). | ✅ |
+| `CANCELLED` | Cancelled before completion. | ✅ |
+| `REFUNDED` | Returned to the customer after completion. | ✅ |
+
+## Checklist
+
+<Check>
+  - Store the `reference` with your order before redirecting the customer.
+  - Fulfil from the webhook or a status check, never from the redirect alone.
+  - Make your fulfilment idempotent per `reference`.
+  - Handle `FAILED` by letting the customer retry, possibly on another network.
+</Check>

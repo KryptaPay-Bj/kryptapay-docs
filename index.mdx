@@ -1,24 +1,44 @@
 ---
 title: "Introduction"
-description: "Welcome to Kryptapay API Doc."
+description: "One API to collect and pay out across Africa — Mobile Money, bank transfers and stablecoins."
 ---
 
-The B2B payment infrastructure that unites Africa and the rest of the world.
+KryptaPay is the B2B payment infrastructure connecting Africa and the rest of the world. Integrate once, then collect and send money across Mobile Money operators, local and international bank rails, and stablecoins.
 
-KryptaPay API enables you to collect and pay via Mobile Money and bank account, collect and pay by SEPA(EUR) or Ach, Wire(USD), manage stablecoins covering many markets and currencies.
+## What you can build
 
-<Card title="Getting started" icon="rocket" href="/getting-started">
-  Read about how to set everything up for development and testing.
-</Card>
+<CardGroup cols={2}>
+  <Card title="Collect payments" icon="inbox-arrow-down" href="/payins">
+    Charge your customers' Mobile Money wallets directly.
+  </Card>
+  <Card title="Send payouts" icon="inbox-arrow-up" href="/payouts">
+    Pay suppliers, staff and customers on Mobile Money, bank accounts or crypto addresses.
+  </Card>
+  <Card title="Convert currencies" icon="arrows-rotate" href="/api-reference/fx/quote">
+    Quote and convert between your fiat and stablecoin wallets in real time.
+  </Card>
+  <Card title="Get notified" icon="bell" href="/webhooks">
+    Receive signed webhooks when payments succeed or fail.
+  </Card>
+</CardGroup>
 
-<Card title="Using the API" icon="computer" href="/using-the-api">
-  Read about the KryptaPay API.
-</Card>
+## How it fits together
 
-<Card title="Testing" icon="arrows-rotate" href="/testing">
-  Learn about error handling when using the API.
-</Card>
+- **Wallets** hold your balance, one per currency. Payins credit them, payouts and fees debit them.
+- **Payins** collect money from a customer into a wallet.
+- **Payouts** send money from a wallet to a recipient.
+- **Conversions** move value between two of your wallets in different currencies.
+- **Transactions** are the unified history of all of the above.
 
-<Card title="Going live" icon="globe-pointer" href="/going-live">
-  Things to set to move from your sandbox account to live payments.
-</Card>
+Every payin, payout and conversion is asynchronous: the API answers immediately with `PENDING` or `PROCESSING`, and the final result arrives by [webhook](/webhooks).
+
+## Start here
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Make your first sandbox payment in a few minutes.
+  </Card>
+  <Card title="API reference" icon="code" href="/api-reference/introduction">
+    Every endpoint, with request and response examples.
+  </Card>
+</CardGroup>

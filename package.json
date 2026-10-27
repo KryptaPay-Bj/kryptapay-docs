@@ -1,0 +1,11 @@
+{
+  "name": "kryptapay-docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "mint dev",
+    "openapi": "node scripts/build-openapi.mjs",
+    "openapi:check": "node scripts/build-openapi.mjs --check",
+    "check": "mint broken-links && mint openapi-check openapi.json"
+  }
+}
