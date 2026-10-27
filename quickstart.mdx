@@ -1,0 +1,104 @@
+---
+title: "Quickstart"
+description: "Make your first sandbox payment and receive its webhook."
+---
+
+This guide takes you from zero to a completed sandbox payin. You need a KryptaPay [merchant account](https://dashboard.krypta-pay.com/onboarding) with KYB approved — see [Verification and compliance](/compliance).
+
+<Steps>
+  <Step title="Create a sandbox API key">
+    In the dashboard, open **Developers → API keys** and create a key with the **Sandbox** environment.
+
+    Copy the secret (`kp_sandbox_…`) right away: it is shown only once. Keep it on your server — never in a browser or mobile app.
+
+    ```bash
+    export KRYPTAPAY_API_KEY="kp_sandbox_..."
+    ```
+  </Step>
+
+  <Step title="Check your key">
+    List your wallets. A `200` response means your key works.
+
+    ```bash
+    curl https://staging.api.krypta-pay.com/v1/wallets \
+      -H "Authorization: Bearer $KRYPTAPAY_API_KEY"
+    ```
+
+    ```json
+    {
+      "ok": true,
+      "data": {
+        "items": [
+          { "id": "cmgx2k1qv0002s60f1a9b8c7d", "kind": "FIAT", "currency": "XOF", "balance": "0", "reserved": "0", "available": "0" }
+        ]
+      }
+    }
+    ```
+  </Step>
+
+  <Step title="Collect a payment">
+    Charge a Mobile Money customer. In production they receive a payment prompt on their phone; in sandbox the payment is simulated and no one is charged.
+
+    ```bash
+    curl https://staging.api.krypta-pay.com/v1/payins/checkout \
+      -H "Authorization: Bearer $KRYPTAPAY_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "amount": "5000",
+        "currency": "XOF",
+        "network": "MTN_BJ",
+        "customer": { "fullName": "Awa Koné", "msisdn": "22997000000" }
+      }'
+    ```
+
+    ```json
+    {
+      "ok": true,
+      "data": {
+        "reference": "tx_3Jk9QwErTy7uIoPa2Sd",
+        "status": "COMPLETED",
+        "amount": "5000",
+        "currency": "XOF",
+        "checkoutUrl": null,
+        "expiresInSec": 1800
+      }
+    }
+    ```
+
+    Store the `reference`: it identifies this payment in webhooks and lookups.
+
+    <Info>
+      Sandbox payments complete instantly. In production the same call returns `PENDING`, and the final status arrives a few seconds to minutes later, once the customer approves. See [Collect payments](/payins) for operators that need a redirect or a code.
+    </Info>
+  </Step>
+
+  <Step title="Get the result">
+    Add a **sandbox** webhook endpoint in **Developers → Webhooks** subscribed to `PAYIN_RECEIVED` and `PAYIN_FAILED`, then repeat the previous step. KryptaPay calls your endpoint when the payment settles — see [Webhooks](/webhooks) to verify the signature.
+
+    You can also check the status at any time:
+
+    ```bash
+    curl https://staging.api.krypta-pay.com/v1/payins/tx_3Jk9QwErTy7uIoPa2Sd \
+      -H "Authorization: Bearer $KRYPTAPAY_API_KEY"
+    ```
+
+    In production, once `status` is `COMPLETED` the amount minus fees is credited to your wallet.
+  </Step>
+</Steps>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Send a payout" icon="inbox-arrow-up" href="/payouts">
+    Pay a recipient from your wallet.
+  </Card>
+  <Card title="Handle errors" icon="triangle-exclamation" href="/errors">
+    Error format and codes to branch on.
+  </Card>
+  <Card title="Go live" icon="globe" href="/going-live">
+    Checklist before switching to production.
+  </Card>
+  <Card title="API reference" icon="code" href="/api-reference/introduction">
+    Every endpoint and field.
+  </Card>
+</CardGroup>

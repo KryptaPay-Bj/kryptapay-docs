@@ -1,0 +1,33 @@
+---
+title: "API reference"
+description: "Every public KryptaPay endpoint, with request and response examples."
+---
+
+## Base URLs
+
+| Environment | Base URL |
+| --- | --- |
+| Sandbox | `https://staging.api.krypta-pay.com` |
+| Production | `https://api.krypta-pay.com` |
+
+## Authentication
+
+Send your secret key as a bearer token on every request. See [Authentication](/authentication) for environments and scopes.
+
+```bash
+curl https://staging.api.krypta-pay.com/v1/wallets \
+  -H "Authorization: Bearer $KRYPTAPAY_API_KEY"
+```
+
+## Conventions
+
+- Responses are wrapped in `{ "ok": true, "data": … }` or `{ "ok": false, "error": { "code", "message" } }`.
+- Amounts are decimal strings in major units (`"1500"`, `"12.50"`).
+- Lists are cursor-paginated with `limit`, `cursor` and `nextCursor`.
+- Payouts accept an `Idempotency-Key` header for safe retries.
+
+Details in [Requests and responses](/requests-and-responses) and [Errors](/errors).
+
+## Try it
+
+Each endpoint page has a playground. Pick **Sandbox** as the server and paste a `kp_sandbox_…` key to send real requests to the sandbox.

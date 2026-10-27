@@ -1,0 +1,85 @@
+---
+title: "Networks and currencies"
+description: "Payment networks, countries and currencies you can use with KryptaPay."
+---
+
+Every payin and payout names a `network`: a Mobile Money operator, a bank rail or a blockchain. The `currency` must match the network.
+
+<Tip>
+  Operators occasionally go into maintenance. Call [List available networks](/api-reference/networks/list) to get the networks usable right now, and hide the others from your customers.
+</Tip>
+
+## Mobile Money
+
+| Country | Operator | Network code | Currency | Payins | Payouts |
+| --- | --- | --- | --- | :-: | :-: |
+| Benin | MTN MoMo | `MTN_BJ` | XOF | ✅ | ✅ |
+| Benin | Moov Money | `MOOV_BJ` | XOF | ✅ | ✅ |
+| Burkina Faso | Orange Money | `ORANGE_BF` | XOF | ✅ | ✅ |
+| Burkina Faso | Moov Money | `MOOV_BF` | XOF | ✅ | ✅ |
+| Cameroon | MTN MoMo | `MTN_CM` | XAF | ✅ | ✅ |
+| Cameroon | Orange Money | `ORANGE_CM` | XAF | ✅ | ✅ |
+| Côte d'Ivoire | Orange Money | `ORANGE_CI` | XOF | ✅ | ✅ |
+| Côte d'Ivoire | MTN MoMo | `MTN_CI` | XOF | ✅ | ✅ |
+| Côte d'Ivoire | Moov Money | `MOOV_CI` | XOF | ✅ | ✅ |
+| Côte d'Ivoire | Wave | `WAVE_CI` | XOF | ✅ | ✅ |
+| Côte d'Ivoire | Djamo | `DJAMO_CI` | XOF | ✅ | ✅ |
+| Gabon | Airtel Money | `AIRTEL_GA` | XAF | ✅ | ✅ |
+| Ghana | MTN MoMo | `MTN_GH` | GHS | ✅ | ✅ |
+| Ghana | Telecel Cash | `AIRTELTIGO_GH`\* | GHS | ✅ | ✅ |
+| Nigeria | OPay | `OPAY_NG` | NGN | ✅ | ✅ |
+| Nigeria | MTN MoMo | `MOMO_NG` | NGN | ✅ | ✅ |
+| Nigeria | Airtel Money | `AIRTEL_NG` | NGN | ✅ | ✅ |
+| Mali | Orange Money | `ORANGE_ML` | XOF | ✅ | ✅ |
+| Republic of the Congo | MTN MoMo | `MTN_CG` | XAF | ✅ | ✅ |
+| Republic of the Congo | Airtel Money | `AIRTEL_CG` | XAF | ✅ | ✅ |
+| DR Congo | Airtel Money | `AIRTEL_CD` | CDF | ✅ | ✅ |
+| DR Congo | Orange Money | `ORANGE_CD` | CDF | ✅ | ✅ |
+| DR Congo | M-Pesa | `VODACOM_CD`\* | CDF | ✅ | ✅ |
+| Senegal | Orange Money | `ORANGE_SN` | XOF | ✅ | ✅ |
+
+\* The network code differs from the operator's current brand name.
+
+Mobile Money minimum: **300** per payin (700 for NGN). Phone numbers (`msisdn`) can be local (`97000000`) or international (`22997000000`, `+22997000000`).
+
+## Bank transfers
+
+| Network code | Currency | Coverage |
+| --- | --- | --- |
+| `BANK_XOF` | XOF | Benin, Burkina Faso, Côte d'Ivoire, Mali, Senegal, Togo |
+| `BANK_XAF` | XAF | Cameroon, Republic of the Congo, Gabon |
+| `BANK_NGN` | NGN | Nigeria |
+| `BANK_GHS` | GHS | Ghana |
+| `BANK_CDF` | CDF | DR Congo |
+| `BANK_EUR` | EUR | Euro zone (SEPA) |
+| `BANK_USD` | USD | International (ACH / wire) |
+
+See [Send payouts](/payouts#recipient-fields-by-network) for the recipient fields each rail needs.
+
+## Stablecoins
+
+| Network code | Chain | Token standard | Currencies |
+| --- | --- | --- | --- |
+| `ETH` | Ethereum | ERC-20 | USDT, USDC |
+| `TRON` | Tron | TRC-20 | USDT, USDC |
+| `POLYGON` | Polygon PoS | ERC-20 | USDT, USDC |
+
+<Warning>
+  Always send stablecoins on the chain you selected. Funds sent on the wrong chain can be lost.
+</Warning>
+
+## Currencies
+
+| Code | Name | Type | Decimals |
+| --- | --- | --- | :-: |
+| `XOF` | West African CFA franc | Fiat | 0 |
+| `XAF` | Central African CFA franc | Fiat | 0 |
+| `NGN` | Nigerian naira | Fiat | 0 |
+| `GHS` | Ghanaian cedi | Fiat | 2 |
+| `CDF` | Congolese franc | Fiat | 2 |
+| `EUR` | Euro | Fiat | 2 |
+| `USD` | US dollar | Fiat | 2 |
+| `USDT` | Tether | Stablecoin | 6 |
+| `USDC` | USD Coin | Stablecoin | 6 |
+
+Amounts are always sent as decimal strings in major units — see [Requests and responses](/requests-and-responses#amounts).

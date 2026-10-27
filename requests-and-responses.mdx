@@ -1,0 +1,87 @@
+---
+title: "Requests and responses"
+description: "Conventions shared by every endpoint: envelope, amounts, pagination, idempotency and rate limits."
+---
+
+## Requests
+
+- Send JSON bodies with `Content-Type: application/json`. Bodies are limited to 1 MB.
+- Unknown fields in a body are ignored, so double-check field names against the [API reference](/api-reference/introduction).
+- All endpoints are under `/v1`. Breaking changes will ship under a new version prefix.
+
+## Response envelope
+
+Every response has the same shape, so you can check `ok` before reading anything else.
+
+<CodeGroup>
+```json Success
+{
+  "ok": true,
+  "data": { "reference": "tx_3Jk9QwErTy7uIoPa2Sd", "status": "PENDING" }
+}
+```
+
+```json Error
+{
+  "ok": false,
+  "error": { "code": "not_found", "message": "Payout not found" }
+}
+```
+</CodeGroup>
+
+See [Errors](/errors) for every code.
+
+## Amounts
+
+Amounts are **decimal strings in major units**, never floats or minor units: `"1500"` is 1,500 XOF and `"12.50"` is 12.50 EUR. Each currency has a maximum number of decimals — 0 for XOF, XAF and NGN, 2 for other fiat, 6 for stablecoins (see [Currencies](/networks#currencies)). Extra decimals are rejected with `amount_decimal_not_allowed`.
+
+Use a decimal library on your side (for example `decimal.js` or Python's `Decimal`) to avoid rounding errors.
+
+## Identifiers and timestamps
+
+- Resources have an `id`. Payins, payouts and conversions also have a `reference` (`tx_…`); either one works in lookups.
+- Timestamps are ISO 8601 in UTC, e.g. `2026-10-27T10:15:00.000Z`.
+
+## Pagination
+
+List endpoints are cursor-paginated, most recent first.
+
+| Parameter | Description |
+| --- | --- |
+| `limit` | Items per page, 1 to 100. Default 25. |
+| `cursor` | The `nextCursor` value from the previous page. |
+
+```bash
+curl "https://staging.api.krypta-pay.com/v1/payouts?limit=50&cursor=cmgx2k1qv0000s60fzz9y8x7w" \
+  -H "Authorization: Bearer $KRYPTAPAY_API_KEY"
+```
+
+Keep requesting until `nextCursor` is `null`.
+
+## Idempotency
+
+Network failures happen: a request can succeed on our side while your client times out. Send an `Idempotency-Key` header on **Create a payout** so retries are safe:
+
+```http
+Idempotency-Key: 4b17ddc6-4d7f-4d3e-a7d5-62e3c7f2d18d
+```
+
+- Generate a new UUID per payout and store it with your record **before** calling the API.
+- Retrying with the same key returns the original payout (`200`) instead of creating a second one.
+- As an extra safety net, an identical payout (same recipient, amount, currency and network) sent within 60 seconds **with a different or no key** is rejected with `409 duplicate_within_window`. `error.details.existingReference` points to the first payout.
+
+<Note>
+  Idempotency keys are enforced in production only. In sandbox every request creates a new simulated payout.
+</Note>
+
+## Rate limits
+
+Each API key can make **120 requests per minute**. Every response carries the current state:
+
+| Header | Meaning |
+| --- | --- |
+| `x-ratelimit-limit` | Requests allowed in the window |
+| `x-ratelimit-remaining` | Requests left in the window |
+| `x-ratelimit-reset` | Seconds until the window resets |
+
+Above the limit you get `429` with a `retry-after` header (seconds). Wait that long before retrying. Prefer [webhooks](/webhooks) over polling to stay well under the limit.

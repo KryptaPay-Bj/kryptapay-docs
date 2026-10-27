@@ -1,55 +1,51 @@
-# Mintlify Starter Kit
+# KryptaPay API docs
 
-Use the starter kit to get your docs deployed and ready to customize.
+Public developer documentation for the KryptaPay API, built with [Mintlify](https://mintlify.com). Pushing to `main` deploys it.
 
-Click the green **Use this template** button at the top of this repo to copy the Mintlify starter kit. The starter kit contains examples with
+## Layout
 
-- Guide pages
-- Navigation
-- Customizations
-- API reference pages
-- Use of popular components
+| Path | Content |
+| --- | --- |
+| `*.mdx` | Guides (quickstart, authentication, payins, payouts, webhooks…) |
+| `api-reference/` | API reference pages: one stub per endpoint (`openapi: METHOD /path`) plus the introduction |
+| `openapi.json` | Public OpenAPI spec — **generated, do not edit by hand** |
+| `scripts/openapi.config.mjs` | Which endpoints are public, plus their descriptions and examples |
+| `scripts/build-openapi.mjs` | Generator: internal spec → public `openapi.json` |
+| `docs.json` | Navigation, theme and redirects |
 
-**[Follow the full quickstart guide](https://starter.mintlify.com/quickstart)**
-
-## AI-assisted writing
-
-Set up your AI coding tool to work with Mintlify:
+## Preview locally
 
 ```bash
-npx skills add https://mintlify.com/docs
-```
-
-This command installs Mintlify's documentation skill for your configured AI tools like Claude Code, Cursor, Windsurf, and others. The skill includes component reference, writing standards, and workflow guidance.
-
-See the [AI tools guides](/ai-tools) for tool-specific setup.
-
-## Development
-
-Install the [Mintlify CLI](https://www.npmjs.com/package/mint) to preview your documentation changes locally. To install, use the following command:
-
-```
 npm i -g mint
+mint dev            # http://localhost:3000
+mint broken-links   # check internal links
 ```
 
-Run the following command at the root of your documentation, where your `docs.json` is located:
+## Updating the API reference
 
+`openapi.json` is generated from the internal spec served by `kryptapay-api` at `/docs/json`. Only operations allowlisted in `scripts/openapi.config.mjs` are published; internal fields (provider details, dashboard-only fields) are stripped.
+
+```bash
+# kryptapay-api running locally on :4000
+npm run openapi
+
+# or from a saved spec / another environment
+npm run openapi -- ./internal-openapi.json
+
+# CI: fail if openapi.json is stale
+npm run openapi:check
 ```
-mint dev
-```
 
-View your local preview at `http://localhost:3000`.
+### Publishing a new endpoint
 
-## Publishing changes
+1. Add it to `operations` in `scripts/openapi.config.mjs` (tag, `operationId`, summary, description, examples).
+2. Run `npm run openapi`.
+3. Add a stub page in `api-reference/<group>/<name>.mdx`:
+   ```mdx
+   ---
+   openapi: "GET /v1/example"
+   ---
+   ```
+4. Add the page to the **API reference** tab in `docs.json`.
 
-Install our GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app) to propagate changes from your repo to your deployment. Changes are deployed to production automatically after pushing to the default branch.
-
-## Need help?
-
-### Troubleshooting
-
-- If your dev environment isn't running: Run `mint update` to ensure you have the most recent version of the CLI.
-- If a page loads as a 404: Make sure you are running in a folder with a valid `docs.json`.
-
-### Resources
-- [Mintlify documentation](https://mintlify.com/docs)
+The script fails if an allowlisted operation or field no longer exists in the internal spec, so renames in the API are caught instead of silently dropped.

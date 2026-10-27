@@ -1,19 +1,33 @@
 ---
-title: "Going Live"
+title: "Going live"
+description: "Checklist before switching from sandbox to production."
 ---
 
-## Going Live Checklist
+Production uses a different base URL and different keys. Nothing from the sandbox — keys, webhook endpoints, transactions — carries over.
 
-Before switching to production, you have few things to do.
+## Switch environments
+
+1. Make sure your organization is KYB-approved — see [Verification and compliance](/compliance).
+2. In the production dashboard, create a **live** API key (`kp_live_…`) with only the [scopes](/authentication#scopes) you need.
+3. Change your base URL to `https://api.krypta-pay.com`.
+4. Create **live** webhook endpoints and store their new signing secrets.
+
+## Checklist
 
 <Check>
-  - Obtain Production API credentials.
-  - Securely store API keys.
-  - Use HTTPS for all requests.
-  - Configure webhook endpoints.
-  - Verify webhook signatures.
-  - Implement retry logic with exponential backoff.
-  - Use idempotency keys for all write operations.
-  - Log request IDs for troubleshooting.
-  - Complete end-to-end testing in the Sandbox environment.
+  - Secret keys live only on your servers, in a secret manager or environment variables.
+  - Every webhook signature is verified on the raw body.
+  - Webhook handling is idempotent: the same `event_id` processed twice has no extra effect.
+  - Orders are fulfilled only after a `COMPLETED` status, never from a redirect alone.
+  - Every payout sends an `Idempotency-Key`, stored before the request.
+  - Errors are handled by `error.code`, not by message text.
+  - `429` and `5xx` are retried with exponential backoff; other errors are not.
+  - Networks shown to customers come from [List available networks](/api-reference/networks/list).
+  - You've run every flow you use (payins, payouts, conversions) end to end in sandbox.
 </Check>
+
+<Warning>
+  Sandbox payments always succeed instantly. In production, payments take time and can fail — make sure your integration handles `PENDING`, `PROCESSING` and `FAILED`.
+</Warning>
+
+Need help? Contact [support@krypta-pay.com](mailto:support@krypta-pay.com).

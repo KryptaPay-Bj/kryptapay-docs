@@ -1,272 +1,141 @@
 ---
-title: "Payouts"
+title: "Send payouts"
+description: "Pay recipients on Mobile Money, bank accounts and crypto addresses."
 ---
 
-# Making a Payout
+A **payout** sends money from your wallet to a recipient. The amount plus fee is reserved from your wallet as soon as the payout is created, and released if it fails or is cancelled.
 
-A payout allows you to transfer funds from your KryptaPay account to a recipient using one of the supported payment methods, such as Mobile Money, Bank Transfer, or Stablecoins.
+## 1. Check the fee (optional)
 
-The typical payout flow consists of four steps:
+[Quote a fee](/api-reference/fees/quote) tells you the fee and the total debit before you commit, and `maxSendable` tells you the largest payout your balance allows.
 
-1. Create a payout.
-2. KryptaPay validates and processes the request.
-3. Receive a webhook notification.
-4. Verify the final transaction status.
-
----
-
-## Payout Flow
-
-```text
-Your Application
-       │
-       │ Create Payout
-       ▼
-KryptaPay API
-       │
-       │ Validate request
-       ▼
-Payment Provider
-       │
-       │ Send funds
-       ▼
-Recipient receives funds
-       │
-       ▼
-Webhook Notification
-       │
-       ▼
-Your Backend
-       │
-       │ Verify transaction
-       ▼
-Update Business Records
+```bash
+curl "https://staging.api.krypta-pay.com/v1/fees/quote?direction=PAYOUT&amount=15000&currency=XOF&network=MTN_BJ" \
+  -H "Authorization: Bearer $KRYPTAPAY_API_KEY"
 ```
 
----
+## 2. Create the payout
 
-## Step 1: Create a Payout
+Always send an `Idempotency-Key` — a UUID you generate and store with your record first. If the request times out, retry with the **same** key: you'll get the original payout back instead of paying twice.
 
-Send a request to create a new payout.
-
-```http
-POST /v1/payouts
-Authorization: Bearer YOUR_API_KEY
-Content-Type: application/json
-Idempotency-Key: 93bbdcb4-c63d-4af9-b630-9af9cc2d56d7
+```bash
+curl https://staging.api.krypta-pay.com/v1/payouts \
+  -H "Authorization: Bearer $KRYPTAPAY_API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: 4b17ddc6-4d7f-4d3e-a7d5-62e3c7f2d18d" \
+  -d '{
+    "amount": "15000",
+    "currency": "XOF",
+    "network": "MTN_BJ",
+    "recipient": { "msisdn": "22997000000", "fullName": "Koffi Mensah" },
+    "description": "Supplier payment #1042",
+    "category": "suppliers"
+  }'
 ```
-
-Request body:
-
-Which `recipient` fields are required depends on `network`:
-
-| Network type | Required fields | Example |
-| --- | --- | --- |
-| Mobile money (e.g. `MTN_BJ`) | `msisdn` | `97000000`, `22997000000`, or `+22997000000` (local or international format) |
-| `BANK_NGN` | `accountNumber` + `bankCode` | Nigerian NUBAN account number + bank code |
-| Crypto (`ETH`, `POLYGON`, `TRON`) | `address` | Wallet address on that chain |
-| Other bank rails (`BANK_XOF`, `BANK_XAF`, `BANK_GHS`, `BANK_CDF`, `BANK_EUR`, `BANK_USD`) | At least one recipient identifier | Settled manually by KryptaPay today |
-
-<Warning>
-  `recipient.bankName` and `recipient.bankId` are accepted but currently informational only — no payment provider reads them. Use `recipient.bankCode` for the bank identifier.
-</Warning>
-
-Mobile money example:
-
-```json
-{
-  "amount": "300",
-  "currency": "XOF",
-  "network": "MTN_BJ",
-  "recipient": {
-    "msisdn": "22997000000",
-    "fullName": "John Doe"
-  },
-  "description": "...",
-  "category": "...",
-  "counterpartyId": "..."
-}
-```
-
-`BANK_NGN` example:
-
-```json
-{
-  "amount": "5000",
-  "currency": "NGN",
-  "network": "BANK_NGN",
-  "recipient": {
-    "accountNumber": "0123456789",
-    "bankCode": "044",
-    "fullName": "John Doe"
-  }
-}
-```
-
----
-
-## Successful Response
 
 ```json
 {
   "ok": true,
   "data": {
-    "id": "...",
-    "reference": "...",
-    "amount": "300",
-    "fee": "...",
-    "description": "...",
-    "recipient": {
-      "msisdn": "22997000000",
-      "iban": "...",
-      "address": "...",
-      "chain": "ETH"
-    },
-    "failureReason": "...",
-    "initiatedAt": "...",
-    "settledAt": "...",
-    "failedAt": "...",
-    "idempotencyKey": "93bbdcb4-c63d-4af9-b630-9af9cc2d56d7",
-    "approvedAt": "...",
+    "id": "cmgx2k1qv0001s60f8h3n5z7a",
+    "reference": "tx_V1StGXR8Z5jdHi6BmyT",
+    "status": "PROCESSING",
+    "amount": "15000",
+    "currency": "XOF",
+    "fee": "150",
+    "network": "MTN_BJ",
+    "recipient": { "msisdn": "22997000000" },
+    "idempotencyKey": "4b17ddc6-4d7f-4d3e-a7d5-62e3c7f2d18d",
     "autoExecuted": true,
     "frozen": false
   }
 }
 ```
 
-<Info>
-  A successful response indicates that the payout request has been accepted for processing. It does not guarantee that the recipient has already received the funds.
-</Info>
+A `201` means the payout was **accepted**, not that the recipient has the money yet.
 
----
+### Recipient fields by network
 
-## Step 2: Processing
-
-After the payout is created, KryptaPay validates:
-
-- Your available account balance.
-- Recipient information.
-- Provider availability.
-- Transaction limits.
-- Compliance and fraud checks.
-
-If validation succeeds, the payout is submitted to the selected payment provider.
-
----
-
-## Step 3: Receive a Webhook
-
-Once processing is complete, KryptaPay sends a webhook to your configured endpoint.
-
-Example:
-
-```json
-{
-  "event": "PAYOUT_COMPLETED",
-  "data": {
-    "id": "tx_...",
-    "reference": "...",
-    "status": "successful",
-    "amount": 300,
-    "currency": "XOF"
-  }
-}
-```
+| Network | Required in `recipient` | Example |
+| --- | --- | --- |
+| Mobile Money (e.g. `MTN_BJ`) | `msisdn` | `97000000`, `22997000000` or `+22997000000` |
+| `BANK_NGN` | `accountNumber` + `bankCode` | NUBAN `0123456789`, bank code `044` |
+| Crypto (`ETH`, `POLYGON`, `TRON`) | `address` | Wallet address on that chain |
+| Other bank rails (`BANK_XOF`, `BANK_XAF`, `BANK_GHS`, `BANK_CDF`, `BANK_EUR`, `BANK_USD`) | At least one identifier, e.g. `iban` | Settled manually by KryptaPay today |
 
 <Warning>
-  Always verify webhook signatures before processing webhook events.
+  `recipient.bankName` and `recipient.bankId` are informational only. Use `recipient.bankCode` to identify the bank.
 </Warning>
 
----
-
-## Step 4: Verify the Payout
-
-Before marking a payout as complete in your system, retrieve its latest status.
-
-```http
-GET /v1/payouts/...
-Authorization: Bearer YOUR_API_KEY
+<CodeGroup>
+```json BANK_NGN
+{
+  "amount": "50000",
+  "currency": "NGN",
+  "network": "BANK_NGN",
+  "recipient": { "accountNumber": "0123456789", "bankCode": "044", "fullName": "Chinedu Okafor" }
+}
 ```
 
-Example response:
+```json Stablecoin
+{
+  "amount": "250",
+  "currency": "USDT",
+  "network": "TRON",
+  "recipient": { "address": "TQ5NxW1Wq3s9m3Kz7hZq7wJ3H4mNfY2xkP" }
+}
+```
+</CodeGroup>
+
+## 3. Track the result
+
+You receive `PAYOUT_COMPLETED` or `PAYOUT_FAILED` by [webhook](/webhooks):
 
 ```json
 {
-    "id": "...",
-    "status": "PENDING",
-    "reference": "...",
-    "amount": "300",
-    "fee": "...",
-    "description": "...",
-    "recipient": {
-      "msisdn": "22997000000",
-      "iban": "...",
-      "address": "..."
-    },
-    "providerRef": "...",
-    "failureReason": "...",
-    "initiatedAt": "...",
-    "settledAt": "...",
-    "failedAt": "...",
-    "idempotencyKey": "93bbdcb4-c63d-4af9-b630-9af9cc2d56d7",
-    "approvedAt": "...",
-    "autoExecuted": true,
-    "frozen": false
+  "event_id": "evt_2Lp8RtYu6Io0PaSdFgHjKl9Z",
+  "event_type": "PAYOUT_COMPLETED",
+  "created_at": "2026-10-27T10:15:42.000Z",
+  "data": {
+    "transaction_id": "cmgx2k1qv0001s60f8h3n5z7a",
+    "reference": "tx_V1StGXR8Z5jdHi6BmyT",
+    "amount": "15000",
+    "currency": "XOF",
+    "network": "MTN_BJ",
+    "status": "COMPLETED"
   }
+}
 ```
 
----
+You can also fetch it any time with [Get a payout](/api-reference/payouts/get), using its `id` or `reference`.
 
-## Payout Statuses
+## Reviews and holds
 
-| Status | Description |
+Most payouts are executed automatically (`autoExecuted: true`). Some stay `PENDING` for a while:
+
+- **Manual approval** — depending on amount and account settings, some payouts are reviewed by KryptaPay before being sent.
+- **Compliance hold** — `frozen: true` means the payout is under compliance review. Don't resubmit it; it continues or is cancelled once reviewed. Contact support if it lasts.
+
+A payout that is still `PENDING` can be cancelled with [Cancel a payout](/api-reference/payouts/cancel), which releases the reserved funds. Once `PROCESSING`, it can no longer be cancelled (`409 bad_status`).
+
+## Statuses
+
+| Status | Meaning | Final |
+| --- | --- | :-: |
+| `PENDING` | Accepted; waiting for approval, review or execution. | |
+| `PROCESSING` | Sent to the network; waiting for confirmation. | |
+| `COMPLETED` | Delivered to the recipient. | ✅ |
+| `FAILED` | Not delivered (invalid account, operator rejection…). Reserved funds are released. See `failureReason`. | ✅ |
+| `CANCELLED` | Cancelled before execution. Reserved funds are released. | ✅ |
+| `REFUNDED` | Reversed after completion. | ✅ |
+
+## Common errors
+
+| Code | Fix |
 | --- | --- |
-| `PENDING` | The payout request has been accepted and is waiting to be processed. |
-| `PROCESSING` | The payment provider is processing the transfer. |
-| `COMPLETED` | The funds have been successfully delivered to the recipient. |
-| `FAILED` | The payout could not be completed. |
-| `CANCELLED` | The payout was cancelled before processing. |
-| `REFUNDED` | The payout was reversed after processing due to provider or compliance requirements. |
+| `insufficient_funds` / `insufficient_funds_with_fee` | Top up, or lower the amount to `maxSendable`. |
+| `limit_exceeded` | Lower the amount or ask support to raise your limits. |
+| `network_unavailable` | Retry later or use another network. |
+| `duplicate_within_window` | A same payout was sent less than 60 s ago — check `details.existingReference`. |
 
----
-
-## Failure Scenarios
-
-A payout may fail for several reasons, including:
-
-- Insufficient merchant balance.
-- Invalid recipient account or phone number.
-- Provider temporarily unavailable.
-- Transaction amount exceeds provider limits.
-- Compliance or fraud checks failed.
-- Recipient account is blocked or inactive.
-
-See [Testing → Failure Codes](/testing#failure-codes) for the complete list of failure codes and recommended actions.
-
----
-
-## Best Practices
-
-<Check>
-  - Generate a unique `Idempotency-Key` for every payout.
-  - Store the KryptaPay payout ID.
-  - Use unique merchant references.
-  - Verify webhook signatures.
-  - Retrieve the payout before updating your records.
-  - Implement retries with exponential backoff for temporary failures.
-  - Log the `X-Request-Id` response header for troubleshooting.
-</Check>
-
----
-
-## Next Steps
-
-<CardGroup cols={2}>
-  <Card title="Webhooks" icon="code" href="/webhooks">
-    Learn how to set up webhook to get notified in real time.
-  </Card>
-
-  <Card title="Verification and Compliance" icon="address-card" href="/compliance">
-    Learn how KryptaPay uses KYB and KYC verification to provide secure, transparent, and trusted payment services.
-  </Card>
-</CardGroup>
+The full list is in [Errors](/errors).
