@@ -9,9 +9,8 @@ Every error uses the same envelope. Branch on `error.code` — it is stable. `er
 {
   "ok": false,
   "error": {
-    "code": "amount_below_min",
-    "message": "Le montant minimum pour un dépôt mobile money est de 300 XOF.",
-    "details": { "min": 300, "currency": "XOF" }
+    "code": "amount_decimal_not_allowed",
+    "message": "Montant décimal non autorisé (montant entier requis)."
   }
 }
 ```
@@ -65,7 +64,7 @@ A body that fails validation (missing or invalid field, wrong type, unmet cross-
 | `not_found` | 404 | The resource doesn't exist or belongs to another account. | Check the id or reference. |
 | `bad_status` | 409 (422 on confirm-otp) | The resource can't change state, e.g. cancelling a payout that is already processing. | Fetch it to see its current status. |
 | `validation_error` | 422 | The body failed validation — see `details.fieldErrors`. | Fix the listed fields. |
-| `amount_below_min` | 422 | Below the Mobile Money minimum (300, or 700 for NGN). | Increase the amount. |
+| `amount_below_min` | 422 | Below the Mobile Money minimum for this currency, given in `details.min`. | Increase the amount. |
 | `amount_decimal_not_allowed` | 422 | Decimal amount for a zero-decimal currency (XOF, XAF, NGN). | Send an integer amount. |
 | `network_unavailable` | 422 | The operator is temporarily under maintenance. | Retry later or use another network. |
 | `no_wallet` | 422 | No active wallet in this currency. | Contact support to open one. |
