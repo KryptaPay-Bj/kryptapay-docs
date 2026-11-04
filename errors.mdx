@@ -80,12 +80,31 @@ A body that fails validation (missing or invalid field, wrong type, unmet cross-
 
 ## Failure codes
 
-The codes above reject a request: no payment is created. A payin or payout can also be accepted and then fail later, once the operator answers. It then moves to `FAILED` and carries a `failureCode` and a human-readable `failureReason`:
+A payin or payout can be accepted and then fail later, once the operator answers. It then moves to `FAILED` and carries a `failureCode` and a human-readable `failureReason`:
 
 - on [Get a payin](/api-reference/payins/get) and [Get a payout](/api-reference/payouts/get) as `failureCode` / `failureReason`;
 - in `PAYIN_FAILED` and `PAYOUT_FAILED` [webhooks](/webhooks) as `failure_code` / `failure_reason`.
 
 Like `error.code`, branch on `failureCode`, never on the reason text.
+
+### Error or failure?
+
+| | Error code | Failure code |
+| --- | --- | --- |
+| When | The request is refused | The request was accepted, the payment failed afterwards |
+| Payment created | No | Yes, with status `FAILED` |
+| Where you get it | `error.code` in the HTTP response (4xx/5xx) | `failureCode` on the payin or payout, `failure_code` in the webhook |
+| Funds | Nothing reserved | Reserved payout funds are released |
+
+The same kind of problem can come either way, depending on when it happens. Handle both: the error when you create the payment, and the `FAILED` status or webhook afterwards. Some codes look alike but mean different things:
+
+| Error code | Failure code | Difference |
+| --- | --- | --- |
+| `insufficient_funds` | `payer_insufficient_balance` | Your wallet balance vs. the customer's Mobile Money balance |
+| `otp_failed` | `payer_declined` | Wrong confirmation code vs. the customer refused on their phone |
+| `payin_unavailable` / `network_unavailable` | `provider_error` | The operator couldn't start the payment vs. the operator returned an error afterwards |
+
+The two lists never share a code.
 
 | `failureCode` | Applies to | What happened | What to do |
 | --- | --- | --- | --- |
