@@ -28,9 +28,9 @@ Sandbox and Production are fully separate: keys, balances, transactions and webh
 
 Sandbox runs the same validation as production — invalid fields, unsupported networks or amounts below the minimum are rejected the same way — but payments are simulated:
 
-- Payins and payouts complete immediately with status `COMPLETED`. Their `*_CREATED` and `*_RECEIVED` / `*_COMPLETED` webhooks are sent right away.
 - No operator, bank or blockchain is contacted, and no one is charged or paid.
-- Sandbox payments don't change wallet balances.
+- Payins and payouts start as `PENDING` and settle a few seconds later, with their webhooks. The customer's or recipient's number chooses the outcome — see [Test in sandbox](/testing).
+- Sandbox has its own wallet balances: payins credit them and payouts debit them.
 - Your organization must still be KYB-approved.
 
 ## Creating keys

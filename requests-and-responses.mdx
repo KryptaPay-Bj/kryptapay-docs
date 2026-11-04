@@ -74,7 +74,7 @@ Idempotency-Key: 4b17ddc6-4d7f-4d3e-a7d5-62e3c7f2d18d
 - As an extra safety net, an identical payout (same recipient, amount, currency and network) sent within 60 seconds **with a different or no key** is rejected with `409 duplicate_within_window`. `error.details.existingReference` points to the first payout.
 
 <Note>
-  Sandbox payouts are simulated and don't check idempotency keys: every request creates a new one.
+  Idempotency keys and the duplicate check work the same in sandbox. A key is unique across both environments: reusing in sandbox a key already used in production (or the reverse) returns `409 idempotency_key_conflict`.
 </Note>
 
 ## Request IDs

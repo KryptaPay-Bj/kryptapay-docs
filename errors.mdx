@@ -78,6 +78,30 @@ A body that fails validation (missing or invalid field, wrong type, unmet cross-
 | `payin_unavailable` | 502 | The operator couldn't start the payin. | Retry with backoff, or use another network. |
 | `internal` | 500 | Unexpected server error. | Retry later; contact support if it persists. |
 
+## Failure codes
+
+The codes above reject a request: no payment is created. A payin or payout can also be accepted and then fail later, once the operator answers. It then moves to `FAILED` and carries a `failureCode` and a human-readable `failureReason`:
+
+- on [Get a payin](/api-reference/payins/get) and [Get a payout](/api-reference/payouts/get) as `failureCode` / `failureReason`;
+- in `PAYIN_FAILED` and `PAYOUT_FAILED` [webhooks](/webhooks) as `failure_code` / `failure_reason`.
+
+Like `error.code`, branch on `failureCode`, never on the reason text.
+
+| `failureCode` | Applies to | What happened | What to do |
+| --- | --- | --- | --- |
+| `payer_insufficient_balance` | Payin | The customer's Mobile Money balance is too low. | Ask the customer to top up, then create a new payin. |
+| `payer_declined` | Payin | The customer refused the payment. | Create a new payin if the customer wants to retry. |
+| `payer_timeout` | Payin | The customer didn't approve the payment in time. | Create a new payin. |
+| `invalid_account` | Payin, payout | The number or account doesn't exist. | Check the number or account details. |
+| `recipient_limit_exceeded` | Payout | The recipient's account has reached its limit. | Send a smaller amount, or retry later. |
+| `provider_error` | Payin, payout | The operator returned an error. | Retry later, or use another network. |
+
+<Warning>
+  In production, `failureCode` can be `null` on a failed payment when the operator's error can't be classified yet. Treat it as a generic failure.
+</Warning>
+
+To trigger each failure code in sandbox, use the [sandbox test numbers](/testing).
+
 ## Retrying safely
 
 - Retry only on `429` and `5xx`, with exponential backoff (for example 1 s, 2 s, 4 s… capped at 1 minute).

@@ -56,7 +56,7 @@ This guide takes you from zero to a completed sandbox payin. You need a KryptaPa
       "ok": true,
       "data": {
         "reference": "tx_3Jk9QwErTy7uIoPa2Sd",
-        "status": "COMPLETED",
+        "status": "PENDING",
         "amount": "5000",
         "currency": "XOF",
         "checkoutUrl": null,
@@ -68,7 +68,7 @@ This guide takes you from zero to a completed sandbox payin. You need a KryptaPa
     Store the `reference`: it identifies this payment in webhooks and lookups.
 
     <Info>
-      Sandbox payments complete instantly. In production the same call returns `PENDING`, and the final status arrives a few seconds to minutes later, once the customer approves. See [Collect payments](/payins) for operators that need a redirect or a code.
+      The payin settles about 5 seconds later in sandbox. In production the final status arrives a few seconds to minutes later, once the customer approves. To trigger a failure or a code prompt instead, use the [sandbox test numbers](/testing). See [Collect payments](/payins) for operators that need a redirect or a code.
     </Info>
   </Step>
 

@@ -189,13 +189,15 @@ The `data` object's fields depend on the event type:
 | Event | Fields in `data` |
 | --- | --- |
 | `PAYIN_CREATED`, `PAYIN_RECEIVED` | `transaction_id`, `reference`, `amount`, `currency`, `network`, `status`, `provider_ref` |
-| `PAYIN_FAILED` | Same as above, plus `failure_reason` |
+| `PAYIN_FAILED` | Same as above, plus `failure_code` and `failure_reason` |
 | `PAYOUT_CREATED` | `transaction_id`, `reference`, `amount`, `currency`, `network`, `status` |
 | `PAYOUT_COMPLETED` | `transaction_id`, `reference`, `amount`, `currency`, `network`, `status`, `provider_ref` |
-| `PAYOUT_FAILED` | Same as `PAYOUT_COMPLETED`, plus `failure_reason` |
+| `PAYOUT_FAILED` | Same as `PAYOUT_COMPLETED`, plus `failure_code` and `failure_reason` |
 | `CONVERSION_COMPLETED` | `transaction_id`, `reference`, `from_currency`, `to_currency`, `from_amount`, `to_amount`, `status` |
 
 `amount`/`from_amount`/`to_amount` are decimal strings (e.g. `"10000"` or `"150.50"`), not minor units.
+
+`failure_code` is a stable code you can branch on (see [Failure codes](/errors#failure-codes)); it can be `null` when the operator's error isn't classified yet. `failure_reason` is human-readable text.
 
 ---
 

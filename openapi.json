@@ -64,7 +64,7 @@
       "post": {
         "operationId": "createPayin",
         "summary": "Create a payin",
-        "description": "Charges a customer's Mobile Money wallet directly. Depending on the operator, the response tells you what the customer must do next:\n\n- **Phone prompt** (most operators) — `checkoutUrl` is `null`; the customer approves on their phone with their PIN.\n- **Operator redirect** (e.g. Wave, Djamo, Orange Money Senegal) — redirect the customer to `checkoutUrl`; they come back to your `redirectUrl`.\n- **Code** (Orange Money Côte d'Ivoire and Burkina Faso) — `otpRequired` is true: show `otpInstructions` and send the code to [Confirm a payin with a code](/api-reference/payins/confirm-otp).\n\nThe payin starts as `PENDING`; listen for the `PAYIN_RECEIVED` / `PAYIN_FAILED` webhooks or poll [Get a payin](/api-reference/payins/get).\n\nIn sandbox the payin is simulated and returns `COMPLETED` immediately.\n\n**API key scope:** `payins:write`",
+        "description": "Charges a customer's Mobile Money wallet directly. Depending on the operator, the response tells you what the customer must do next:\n\n- **Phone prompt** (most operators) — `checkoutUrl` is `null`; the customer approves on their phone with their PIN.\n- **Operator redirect** (e.g. Wave, Djamo, Orange Money Senegal) — redirect the customer to `checkoutUrl`; they come back to your `redirectUrl`.\n- **Code** (Orange Money Côte d'Ivoire and Burkina Faso) — `otpRequired` is true: show `otpInstructions` and send the code to [Confirm a payin with a code](/api-reference/payins/confirm-otp).\n\nThe payin starts as `PENDING`; listen for the `PAYIN_RECEIVED` / `PAYIN_FAILED` webhooks or poll [Get a payin](/api-reference/payins/get).\n\nIn sandbox the payin is simulated: the customer number chooses the outcome. See [Test in sandbox](/testing).\n\n**API key scope:** `payins:write`",
         "tags": [
           "Payins"
         ],
@@ -430,6 +430,18 @@
                             "string",
                             "null"
                           ]
+                        },
+                        "failureCode": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "failureReason": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
                         }
                       },
                       "required": [
@@ -441,7 +453,9 @@
                         "checkoutUrl",
                         "expiresAt",
                         "initiatedAt",
-                        "settledAt"
+                        "settledAt",
+                        "failureCode",
+                        "failureReason"
                       ],
                       "additionalProperties": false
                     }
@@ -689,6 +703,12 @@
                           ],
                           "additionalProperties": false
                         },
+                        "failureCode": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
                         "failureReason": {
                           "type": [
                             "string",
@@ -741,6 +761,7 @@
                         "network",
                         "description",
                         "recipient",
+                        "failureCode",
                         "failureReason",
                         "initiatedAt",
                         "settledAt",
@@ -917,6 +938,12 @@
                                 ],
                                 "additionalProperties": false
                               },
+                              "failureCode": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
                               "failureReason": {
                                 "type": [
                                   "string",
@@ -967,6 +994,7 @@
                               "network",
                               "description",
                               "recipient",
+                              "failureCode",
                               "failureReason",
                               "initiatedAt",
                               "settledAt",
@@ -1143,6 +1171,12 @@
                           ],
                           "additionalProperties": false
                         },
+                        "failureCode": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
                         "failureReason": {
                           "type": [
                             "string",
@@ -1193,6 +1227,7 @@
                         "network",
                         "description",
                         "recipient",
+                        "failureCode",
                         "failureReason",
                         "initiatedAt",
                         "settledAt",
@@ -1353,6 +1388,12 @@
                           ],
                           "additionalProperties": false
                         },
+                        "failureCode": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
                         "failureReason": {
                           "type": [
                             "string",
@@ -1403,6 +1444,7 @@
                         "network",
                         "description",
                         "recipient",
+                        "failureCode",
                         "failureReason",
                         "initiatedAt",
                         "settledAt",
@@ -1691,6 +1733,9 @@
                               "sell": {
                                 "type": "string"
                               },
+                              "spreadBps": {
+                                "type": "number"
+                              },
                               "source": {
                                 "type": "string"
                               },
@@ -1704,6 +1749,7 @@
                               "mid",
                               "buy",
                               "sell",
+                              "spreadBps",
                               "source",
                               "validFrom"
                             ],

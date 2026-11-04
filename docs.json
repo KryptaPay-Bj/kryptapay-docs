@@ -37,7 +37,8 @@
             "group": "Guides",
             "pages": [
               "payins",
-              "payouts"
+              "payouts",
+              "testing"
             ]
           },
           {
@@ -160,7 +161,6 @@
     { "source": "/getting-started", "destination": "/quickstart" },
     { "source": "/using-the-api", "destination": "/quickstart" },
     { "source": "/core-concepts", "destination": "/" },
-    { "source": "/testing", "destination": "/errors" },
     { "source": "/providers", "destination": "/networks" },
     { "source": "/deposits", "destination": "/payins" },
     { "source": "/api-reference", "destination": "/api-reference/introduction" }

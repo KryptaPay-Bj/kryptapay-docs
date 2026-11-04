@@ -1,0 +1,71 @@
+---
+title: "Test in sandbox"
+description: "Use test numbers to trigger every payin and payout outcome before going live."
+---
+
+Sandbox payments never reach an operator, a bank or a blockchain. Instead, the **last 6 digits** of the customer's or recipient's number choose what happens. You can test success, each kind of failure, a code prompt and a payment that never settles — without moving real money.
+
+## How sandbox payments behave
+
+- A payin or payout is created as `PENDING`, like in production. About **5 seconds** later it settles, and you receive the webhook.
+- Sandbox has its own wallet balances. A completed payin credits your sandbox wallet, net of fees. A payout reserves the amount plus fees, then debits it when it completes or releases it when it fails.
+- Validation, fees, idempotency keys and the 60-second duplicate check work as in production. Sending more than your sandbox balance returns `insufficient_funds`.
+- Fund your sandbox wallet with sandbox payins before testing payouts.
+
+<Note>
+  Any number that isn't listed below succeeds after about 5 seconds. Only the last 6 digits count: keep a valid prefix for the network (`+225 07`, `+229 01`, `+228 90`…) and end the number with a test suffix.
+</Note>
+
+## Payin test numbers
+
+Use them as `customer.msisdn` in [Create a payin](/api-reference/payins/create).
+
+| Number ends with | Result | Webhook |
+| --- | --- | --- |
+| any other | `PENDING`, then `COMPLETED` after ~5 s | `PAYIN_RECEIVED` |
+| `000011` | `COMPLETED` in the creation response | `PAYIN_RECEIVED` |
+| `000021` | `FAILED` after ~5 s — `payer_insufficient_balance` | `PAYIN_FAILED` |
+| `000022` | `FAILED` after ~5 s — `payer_declined` | `PAYIN_FAILED` |
+| `000023` | `FAILED` after ~30 s — `payer_timeout` | `PAYIN_FAILED` |
+| `000024` | `FAILED` after ~5 s — `invalid_account` | `PAYIN_FAILED` |
+| `000025` | Code required: `otpRequired` is `true`. Send `123456` to [Confirm a payin with a code](/api-reference/payins/confirm-otp); any other code returns `otp_failed`. | `PAYIN_RECEIVED` |
+| `000026` | Stays `PENDING` forever | none |
+| `000029` | Rejected immediately with `422 network_unavailable` | none |
+
+Example — a payin the customer declines:
+
+```bash
+curl https://staging.api.krypta-pay.com/v1/payins/checkout \
+  -H "Authorization: Bearer $KRYPTAPAY_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": "5000",
+    "currency": "XOF",
+    "network": "MTN_BJ",
+    "customer": { "msisdn": "2290197000022" }
+  }'
+```
+
+## Payout test numbers
+
+The suffix is read from `recipient.msisdn`, or for bank and crypto payouts from `recipient.accountNumber`, `recipient.iban` or `recipient.address`. See [Send payouts](/payouts).
+
+| Recipient ends with | Result | Webhook |
+| --- | --- | --- |
+| any other | `PENDING`, then `COMPLETED` after ~5 s | `PAYOUT_COMPLETED` |
+| `000011` | `COMPLETED` in the creation response | `PAYOUT_COMPLETED` |
+| `000024` | `FAILED` after ~5 s — `invalid_account`. Funds are released. | `PAYOUT_FAILED` |
+| `000027` | `FAILED` after ~5 s — `recipient_limit_exceeded`. Funds are released. | `PAYOUT_FAILED` |
+| `000028` | `FAILED` after ~5 s — `provider_error`. Funds are released. | `PAYOUT_FAILED` |
+| `000026` | Stays `PENDING` forever | none |
+| `000029` | Rejected immediately with `422 network_unavailable` | none |
+
+Payin-only suffixes (`000021`, `000022`, `000023`, `000025`) behave like any other number on a payout.
+
+A failed payin or payout carries a `failureCode` (`failure_code` in webhooks). What each code means and how to handle it is in [Failure codes](/errors#failure-codes).
+
+## What sandbox doesn't cover
+
+- Customers aren't redirected and no phone prompt is sent: `checkoutUrl` is always `null`.
+- Payouts don't wait for KryptaPay's review in sandbox. In production, a payout can stay `PENDING` until it's approved.
+- Production limits and compliance screening don't apply in sandbox.
