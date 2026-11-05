@@ -25,10 +25,11 @@ Production uses a different base URL and different keys. Nothing from the sandbo
   - The `X-Request-Id` response header is logged, so you can quote it to support.
   - Networks shown to customers come from [List available networks](/api-reference/networks/list).
   - You've run every flow you use (payins, payouts, conversions) end to end in sandbox.
+  - You've triggered each failure your integration handles with the [sandbox test numbers](/testing), and you branch on `failureCode`.
 </Check>
 
 <Warning>
-  Sandbox payments always succeed instantly. In production, payments take time and can fail — make sure your integration handles `PENDING`, `PROCESSING` and `FAILED`.
+  In production, payments can take minutes to settle, and a payout can stay `PENDING` while KryptaPay reviews it. Make sure your integration handles `PENDING`, `PROCESSING` and `FAILED` without assuming a delay.
 </Warning>
 
 Need help? Contact [support@krypta-pay.com](mailto:support@krypta-pay.com).

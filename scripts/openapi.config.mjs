@@ -140,7 +140,7 @@ export const operations = {
       '',
       'The payin starts as `PENDING`; listen for the `PAYIN_RECEIVED` / `PAYIN_FAILED` webhooks or poll [Get a payin](/api-reference/payins/get).',
       '',
-      'In sandbox the payin is simulated and returns `COMPLETED` immediately.',
+      'In sandbox the payin is simulated: the customer number chooses the outcome. See [Test in sandbox](/testing).',
     ].join('\n'),
     scope: 'payins:write',
     errors: [422, 502],

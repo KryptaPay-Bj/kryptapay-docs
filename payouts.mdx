@@ -125,7 +125,7 @@ A payout that is still `PENDING` can be cancelled with [Cancel a payout](/api-re
 | `PENDING` | Accepted; waiting for approval, review or execution. | |
 | `PROCESSING` | Sent to the network; waiting for confirmation. | |
 | `COMPLETED` | Delivered to the recipient. | ✅ |
-| `FAILED` | Not delivered (invalid account, operator rejection…). Reserved funds are released. See `failureReason`. | ✅ |
+| `FAILED` | Not delivered (invalid account, operator rejection…). Reserved funds are released. See `failureCode` and `failureReason`. | ✅ |
 | `CANCELLED` | Cancelled before execution. Reserved funds are released. | ✅ |
 | `REFUNDED` | Reversed after completion. | ✅ |
 
