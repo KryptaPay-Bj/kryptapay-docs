@@ -197,7 +197,7 @@ The `data` object's fields depend on the event type:
 
 `amount`/`from_amount`/`to_amount` are decimal strings (e.g. `"10000"` or `"150.50"`), not minor units.
 
-`failure_code` is a stable code you can branch on (see [Failure codes](/errors#failure-codes)); it can be `null` when the operator's error isn't classified yet. `failure_reason` is human-readable text.
+`failure_code` is a stable code you can branch on (see [Failure codes](/errors#failure-codes)); it's `provider_error` when the operator doesn't say why the payment failed. `failure_reason` is human-readable text.
 
 ---
 

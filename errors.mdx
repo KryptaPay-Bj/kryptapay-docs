@@ -113,10 +113,12 @@ The two lists never share a code.
 | `payer_timeout` | Payin | The customer didn't approve the payment in time. | Create a new payin. |
 | `invalid_account` | Payin, payout | The number or account doesn't exist. | Check the number or account details. |
 | `recipient_limit_exceeded` | Payout | The recipient's account has reached its limit. | Send a smaller amount, or retry later. |
-| `provider_error` | Payin, payout | The operator returned an error. | Retry later, or use another network. |
+| `provider_error` | Payin, payout | The operator returned an error, or didn't say why the payment failed. | Retry later, or use another network. |
 
 <Warning>
-  In production, `failureCode` can be `null` on a failed payment when the operator's error can't be classified yet. Treat it as a generic failure.
+  How precise the code is depends on what the operator reports: some operators say why a payment failed, others don't. When they don't, you get `provider_error`, in sandbox and in production alike. Always handle `provider_error` as a generic failure.
+
+  `failureCode` is `null` on payments that failed before failure codes were introduced, and on payouts rejected by KryptaPay's review — `failureReason` explains why.
 </Warning>
 
 To trigger each failure code in sandbox, use the [sandbox test numbers](/testing).
