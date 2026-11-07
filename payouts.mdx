@@ -118,6 +118,14 @@ Most payouts are executed automatically (`autoExecuted: true`). Some stay `PENDI
 
 A payout that is still `PENDING` can be cancelled with [Cancel a payout](/api-reference/payouts/cancel), which releases the reserved funds. Once `PROCESSING`, it can no longer be cancelled (`409 bad_status`).
 
+## Funds from a recent conversion
+
+Funds you receive through a [conversion](/api-reference/fx/convert) into a fiat currency (`XOF`, `XAF`, `NGN`, `GHS`, `CDF`, `EUR`, `USD`) can be paid out 24 hours after the conversion. Stablecoins (`USDC`, `USDT`) are not affected.
+
+- Only the converted amount waits. The rest of the wallet stays available for payouts.
+- The conversion response gives the exact time in `withdrawableAt`.
+- A payout that needs part of that amount is refused with `422 funds_not_yet_available`. `details.withdrawable` is what you can send now, and `details.availableAt` is when the payout will go through.
+
 ## Statuses
 
 | Status | Meaning | Final |
@@ -134,6 +142,7 @@ A payout that is still `PENDING` can be cancelled with [Cancel a payout](/api-re
 | Code | Fix |
 | --- | --- |
 | `insufficient_funds` / `insufficient_funds_with_fee` | Top up, or lower the amount to `maxSendable`. |
+| `funds_not_yet_available` | Part of the amount comes from a conversion of less than 24 hours. Send up to `details.withdrawable` now, or retry after `details.availableAt`. |
 | `limit_exceeded` | Lower the amount or ask support to raise your limits. |
 | `network_unavailable` | Retry later or use another network. |
 | `duplicate_within_window` | A same payout was sent less than 60 s ago — check `details.existingReference`. |
