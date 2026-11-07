@@ -70,6 +70,7 @@ A body that fails validation (missing or invalid field, wrong type, unmet cross-
 | `no_wallet` | 422 | No active wallet in this currency. | Contact support to open one. |
 | `insufficient_funds` | 422 | Not enough available balance for the payout. | Top up the wallet and retry. |
 | `insufficient_funds_with_fee` | 422 | The balance doesn't cover amount + fee. | Top up, or use [Quote a fee](/api-reference/fees/quote) to get `maxSendable`. |
+| `funds_not_yet_available` | 422 | The payout needs funds from a conversion into a fiat currency made less than 24 hours ago. | Send up to `details.withdrawable` now, or retry after `details.availableAt`. See [Funds from a recent conversion](/payouts#funds-from-a-recent-conversion). |
 | `limit_exceeded` | 422 | Per-transaction, daily or monthly limit reached. | Reduce the amount or ask support to raise the limit. |
 | `duplicate_within_window` | 409 | Same recipient, amount, currency and network within 60 seconds under a different or missing `Idempotency-Key`. | Check `details.existingReference`; retry with the original `Idempotency-Key` instead. |
 | `otp_failed` | 422 | Wrong payin code, or the operator refused the payment. | Let the customer generate a new code and retry. |
