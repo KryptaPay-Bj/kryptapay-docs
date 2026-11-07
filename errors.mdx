@@ -65,6 +65,7 @@ A body that fails validation (missing or invalid field, wrong type, unmet cross-
 | `bad_status` | 409 (422 on confirm-otp) | The resource can't change state, e.g. cancelling a payout that is already processing. | Fetch it to see its current status. |
 | `validation_error` | 422 | The body failed validation — see `details.fieldErrors`. | Fix the listed fields. |
 | `amount_below_min` | 422 | Below the Mobile Money minimum for this currency, given in `details.min`. | Increase the amount. |
+| `amount_above_max` | 422 | Above the per-transaction maximum for this network, given in `details.max` (Ghana: 10,000 GHS). | Split the amount into several payments. |
 | `amount_decimal_not_allowed` | 422 | Decimal amount for a zero-decimal currency (XOF, XAF, NGN). | Send an integer amount. |
 | `network_unavailable` | 422 | The operator is temporarily under maintenance. | Retry later or use another network. |
 | `no_wallet` | 422 | No active wallet in this currency. | Contact support to open one. |
