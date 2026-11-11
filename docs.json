@@ -38,6 +38,7 @@
             "pages": [
               "payins",
               "payouts",
+              "beneficiaries",
               "testing"
             ]
           },
@@ -74,6 +75,16 @@
               "api-reference/payouts/list",
               "api-reference/payouts/get",
               "api-reference/payouts/cancel"
+            ]
+          },
+          {
+            "group": "Beneficiaries",
+            "pages": [
+              "api-reference/beneficiaries/create",
+              "api-reference/beneficiaries/list",
+              "api-reference/beneficiaries/get",
+              "api-reference/beneficiaries/update",
+              "api-reference/beneficiaries/send-verification"
             ]
           },
           {
