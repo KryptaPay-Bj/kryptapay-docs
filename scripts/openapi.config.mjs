@@ -92,6 +92,10 @@ const BENEFICIARY_FIELDS = {
   'response:verificationRequiredAt': 'When set, the beneficiary\'s EUR / USD bank accounts can only be paid once `verification` is `APPROVED` with `tosAccepted: true`.',
   'response:verification': 'Identity verification for EUR / USD bank accounts. `null` until a verification link is sent.',
 }
+// Same descriptions for a list page, whose beneficiaries sit in `data.items`.
+const BENEFICIARY_LIST_FIELDS = Object.fromEntries(
+  Object.entries(BENEFICIARY_FIELDS).map(([k, v]) => [k.replace('response:', 'response:items.'), v]),
+)
 
 // Enums hoisted into components.schemas when an inline enum matches exactly.
 export const sharedEnums = {
@@ -365,7 +369,7 @@ export const operations = {
     operationId: 'listBeneficiaries',
     summary: 'List beneficiaries',
     description: 'Most recent first. Pass `nextCursor` from the previous page as `cursor` to get the next one; `nextCursor` is `null` on the last page.',
-    fields: BENEFICIARY_FIELDS,
+    fields: BENEFICIARY_LIST_FIELDS,
     dropResponse: BENEFICIARY_DROP,
     responseExample: { ok: true, data: { items: [beneficiaryExample], nextCursor: null } },
   },
