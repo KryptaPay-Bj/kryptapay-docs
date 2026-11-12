@@ -27,6 +27,7 @@ export const servers = [
 export const tags = [
   { name: 'Payins', description: 'Collect money from your customers\' Mobile Money wallets.' },
   { name: 'Payouts', description: 'Send money to Mobile Money wallets, bank accounts and crypto addresses.' },
+  { name: 'Beneficiaries', description: 'People and companies you pay, with their payment accounts and identity verification.' },
   { name: 'Fees', description: 'Know the exact fee before you move money.' },
   { name: 'FX', description: 'Exchange rates, quotes and conversions between your wallets.' },
   { name: 'Wallets', description: 'Balances of your multi-currency wallets.' },
@@ -39,7 +40,58 @@ export const tags = [
 export const stripProperties = ['provider', 'providerRef', 'providerFee', 'providerMode', 'upstreamMode']
 
 // Request-body fields that only make sense from the dashboard (user 2FA, internal links).
-export const stripRequestProperties = ['paymentPin', 'totp', 'invoiceId', 'conversionId', 'counterpartyId']
+// counterpartyId is public: BANK_EUR / BANK_USD payouts require it.
+export const stripRequestProperties = ['paymentPin', 'totp', 'invoiceId', 'conversionId']
+
+const BENEFICIARY_DROP = ['approvalSource', 'docsRequiredAt', 'methodDetails', 'isVerified']
+
+const beneficiaryExample = {
+  id: 'cmh1a2b3c0001xyz',
+  entityType: 'INDIVIDUAL',
+  fullName: 'Jean Dupont',
+  type: 'FOURNISSEUR',
+  country: 'FR',
+  email: 'jean.dupont@example.com',
+  approvalStatus: 'PENDING',
+  rejectionReason: null,
+  isBlacklisted: false,
+  verificationRequiredAt: '2026-11-11T10:15:00.000Z',
+  verification: {
+    status: 'NOT_STARTED',
+    tosAccepted: false,
+    nameMismatch: false,
+    lastSentAt: '2026-11-11T10:15:00.000Z',
+    rejectionReasons: [],
+  },
+  accounts: [{
+    id: 'cmh1a2b3c0002xyz',
+    kind: 'BANK',
+    currency: 'EUR',
+    label: null,
+    bankName: 'BNP Paribas',
+    accountHolder: 'Jean Dupont',
+    iban: 'FR7630006000011234567890189',
+    swiftBic: 'BNPAFRPP',
+  }],
+}
+
+const beneficiaryCreateExample = {
+  entityType: 'INDIVIDUAL',
+  fullName: 'Jean Dupont',
+  country: 'FR',
+  email: 'jean.dupont@example.com',
+  accounts: [{
+    kind: 'BANK', currency: 'EUR', bankName: 'BNP Paribas', accountHolder: 'Jean Dupont',
+    iban: 'FR7630006000011234567890189', swiftBic: 'BNPAFRPP',
+  }],
+}
+
+const BENEFICIARY_FIELDS = {
+  'response:entityType': '`INDIVIDUAL` or `BUSINESS`. Set at creation, cannot be changed.',
+  'response:approvalStatus': 'KryptaPay review. Only an `APPROVED` beneficiary can be paid.',
+  'response:verificationRequiredAt': 'When set, the beneficiary\'s EUR / USD bank accounts can only be paid once `verification` is `APPROVED` with `tosAccepted: true`.',
+  'response:verification': 'Identity verification for EUR / USD bank accounts. `null` until a verification link is sent.',
+}
 
 // Enums hoisted into components.schemas when an inline enum matches exactly.
 export const sharedEnums = {
@@ -233,7 +285,8 @@ export const operations = {
     idempotent: true,
     errors: [409, 422],
     fields: {
-      'request:recipient': 'Which fields are required depends on `network`: mobile money networks require msisdn; BANK_NGN requires accountNumber and bankCode; crypto networks (ETH/POLYGON/TRON) require address. Every other bank rail (BANK_XOF, BANK_XAF, BANK_GHS, BANK_CDF, BANK_EUR, BANK_USD) is settled manually by KryptaPay today, so at least one recipient identifier is required but no specific field is enforced yet.',
+      'request:recipient': 'Which fields are required depends on `network`: mobile money networks require msisdn; BANK_NGN requires accountNumber and bankCode; crypto networks (ETH/POLYGON/TRON) require address; BANK_EUR and BANK_USD require the iban (or accountNumber) saved on the beneficiary given in `counterpartyId`. The other bank rails (BANK_XOF, BANK_XAF, BANK_GHS, BANK_CDF) are settled manually by KryptaPay today, so at least one recipient identifier is required but no specific field is enforced yet.',
+      'request:counterpartyId': 'Id of a saved [beneficiary](/beneficiaries) to pay. Required for BANK_EUR and BANK_USD. The beneficiary must be approved, not blacklisted and, for EUR / USD bank payouts, verified.',
       'request:recipient.msisdn': `${MSISDN_DESC} Required for mobile money networks.`,
       'request:recipient.bankName': 'Informational only today — no payment provider reads this field. Kept for display / forward-compatibility.',
       'request:recipient.bankId': 'Informational only today — no payment provider reads this field. Use bankCode instead.',
@@ -279,6 +332,84 @@ export const operations = {
     errors: [404, 409],
     fields: { 'param:id': 'Payout id or reference.' },
     responseExample: { ok: true, data: { ...payoutExample, status: 'CANCELLED' } },
+  },
+
+  // ── Beneficiaries ─────────────────────────────────────────────────────
+  'POST /v1/counterparties/': {
+    tag: 'Beneficiaries',
+    operationId: 'createBeneficiary',
+    summary: 'Create a beneficiary',
+    description: [
+      'Saves a person (`INDIVIDUAL`) or company (`BUSINESS`) you pay, with its payment accounts. It starts as `PENDING` until KryptaPay approves it.',
+      '',
+      'An `INDIVIDUAL` can only hold `EUR` / `USD` bank accounts. A `BUSINESS` must send its trade register extract (`rccm`) and its manager\'s ID (`id_director`) in `documents`.',
+      'When the beneficiary has an `EUR` or `USD` bank account, `email` is required and we email them an identity verification link. See [Beneficiaries](/beneficiaries).',
+      '',
+      'The request body can be up to 50 MB.',
+    ].join('\n'),
+    scope: 'payouts:write',
+    errors: [422],
+    fields: {
+      ...BENEFICIARY_FIELDS,
+      'request:entityType': '`INDIVIDUAL` or `BUSINESS` (default). Cannot be changed later.',
+      'request:email': 'Required when the beneficiary has an `EUR` or `USD` bank account: the verification link is sent there.',
+      'request:accounts': 'At most one account per `kind` and `currency`.',
+      'request:documents': 'Company documents, each `{ kind, filename, mimeType, base64 }`. Not accepted for an `INDIVIDUAL`.',
+    },
+    dropResponse: BENEFICIARY_DROP,
+    requestExample: beneficiaryCreateExample,
+    responseExample: { ok: true, data: beneficiaryExample },
+  },
+  'GET /v1/counterparties/': {
+    tag: 'Beneficiaries',
+    operationId: 'listBeneficiaries',
+    summary: 'List beneficiaries',
+    description: 'Most recent first. Pass `nextCursor` from the previous page as `cursor` to get the next one; `nextCursor` is `null` on the last page.',
+    fields: BENEFICIARY_FIELDS,
+    dropResponse: BENEFICIARY_DROP,
+    responseExample: { ok: true, data: { items: [beneficiaryExample], nextCursor: null } },
+  },
+  'GET /v1/counterparties/{id}': {
+    tag: 'Beneficiaries',
+    operationId: 'getBeneficiary',
+    summary: 'Get a beneficiary',
+    description: 'Returns a beneficiary with its accounts, approval and verification status.',
+    errors: [404],
+    fields: { ...BENEFICIARY_FIELDS, 'param:id': 'Beneficiary id.' },
+    dropResponse: BENEFICIARY_DROP,
+    responseExample: { ok: true, data: { ...beneficiaryExample, verification: { ...beneficiaryExample.verification, status: 'UNDER_REVIEW' } } },
+  },
+  'PATCH /v1/counterparties/{id}': {
+    tag: 'Beneficiaries',
+    operationId: 'updateBeneficiary',
+    summary: 'Update a beneficiary',
+    description: [
+      'Any change sends the beneficiary back to `PENDING` until KryptaPay reviews it again. `entityType` cannot be changed.',
+      '',
+      '`accounts` and `documents`, when sent, replace the whole list. Changing `email` starts a new verification at the new address.',
+    ].join('\n'),
+    scope: 'payouts:write',
+    errors: [404, 422],
+    fields: { ...BENEFICIARY_FIELDS, 'param:id': 'Beneficiary id.' },
+    dropResponse: BENEFICIARY_DROP,
+    requestExample: { email: 'j.dupont@example.com' },
+    responseExample: { ok: true, data: { ...beneficiaryExample, email: 'j.dupont@example.com' } },
+  },
+  'POST /v1/counterparties/{id}/verification': {
+    tag: 'Beneficiaries',
+    operationId: 'sendBeneficiaryVerification',
+    summary: 'Send the verification link',
+    description: [
+      'Emails the beneficiary a new identity verification link, required before their `EUR` / `USD` bank accounts can be paid.',
+      'Use it when they lost the email, or to start verification for a beneficiary saved before it existed.',
+      '',
+      'Errors: `no_verified_account`, `email_required`, `country_not_supported` (422); `already_verified`, `resend_too_soon` (less than 10 minutes since the last link), `verification_unavailable` (409); `verification_provider_error` (502).',
+    ].join('\n'),
+    scope: 'payouts:write',
+    errors: [404, 409, 422, 502],
+    fields: { ...BENEFICIARY_FIELDS, 'param:id': 'Beneficiary id.' },
+    dropResponse: BENEFICIARY_DROP,
+    responseExample: { ok: true, data: beneficiaryExample },
   },
 
   // ── Fees ──────────────────────────────────────────────────────────────

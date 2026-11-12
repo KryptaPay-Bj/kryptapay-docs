@@ -74,6 +74,13 @@ A body that fails validation (missing or invalid field, wrong type, unmet cross-
 | `funds_not_yet_available` | 422 | The payout needs funds from a conversion into a fiat currency made less than 24 hours ago. | Send up to `details.withdrawable` now, or retry after `details.availableAt`. See [Funds from a recent conversion](/payouts#funds-from-a-recent-conversion). |
 | `limit_exceeded` | 422 | Per-transaction, daily or monthly limit reached. | Reduce the amount or ask support to raise the limit. |
 | `duplicate_within_window` | 409 | Same recipient, amount, currency and network within 60 seconds under a different or missing `Idempotency-Key`. | Check `details.existingReference`; retry with the original `Idempotency-Key` instead. |
+| `counterparty_required` | 422 | A `BANK_EUR` / `BANK_USD` payout was sent without `counterpartyId`. | Save the recipient as a [beneficiary](/beneficiaries) and pass its id. |
+| `counterparty_not_found` | 422 | `counterpartyId` doesn't match a beneficiary of your account. | Check the id. |
+| `counterparty_not_approved` | 422 | The beneficiary is still under review, or was rejected. | Wait for approval, or fix the beneficiary. |
+| `counterparty_blacklisted` | 422 | You blacklisted this beneficiary. | Remove it from the blacklist if the payout is intended. |
+| `incomplete_counterparty_docs` | 422 | The company beneficiary is missing its trade register extract or manager's ID. | Add the documents to the beneficiary. |
+| `recipient_account_mismatch` | 422 | The `iban` / `accountNumber` sent isn't the beneficiary's saved account in this currency. | Send the saved account, or update the beneficiary. |
+| `beneficiary_verification_pending` | 422 | The beneficiary hasn't completed identity verification, required for `EUR` / `USD` bank payouts. | [Resend the verification link](/beneficiaries#3-resend-the-link). |
 | `otp_failed` | 422 | Wrong payin code, or the operator refused the payment. | Let the customer generate a new code and retry. |
 | `otp_unsupported` | 422 | The payin doesn't use a confirmation code. | Don't call confirm-otp unless `otpRequired` was true. |
 | `rate_limited` | 429 | Too many requests for this key. | Wait `retry-after` seconds, then retry. |

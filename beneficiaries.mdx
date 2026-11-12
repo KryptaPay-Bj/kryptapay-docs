@@ -1,0 +1,129 @@
+---
+title: "Beneficiaries"
+description: "Save who you pay, and get EUR / USD beneficiaries verified before paying them."
+---
+
+A **beneficiary** is a person or company you pay, saved with one or more payment accounts. Bank payouts in `EUR` or `USD` must target a saved beneficiary. For other networks it is optional.
+
+Managing beneficiaries needs a key with the `payouts:write` [scope](/authentication#scopes).
+
+## Individual or company
+
+Choose `entityType` when you create the beneficiary. You can't change it afterwards.
+
+| `entityType` | Accounts allowed | Documents |
+| --- | --- | --- |
+| `BUSINESS` (default) | Bank, Mobile Money and stablecoin, in any supported currency | Trade register extract (`rccm`) and the manager's ID (`id_director`) are required |
+| `INDIVIDUAL` | `EUR` and `USD` bank accounts only | None. Their identity is verified by our payment partner |
+
+## 1. Create the beneficiary
+
+```bash
+curl https://staging.api.krypta-pay.com/v1/counterparties \
+  -H "Authorization: Bearer $KRYPTAPAY_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "entityType": "INDIVIDUAL",
+    "fullName": "Jean Dupont",
+    "country": "FR",
+    "email": "jean.dupont@example.com",
+    "accounts": [
+      {
+        "kind": "BANK",
+        "currency": "EUR",
+        "bankName": "BNP Paribas",
+        "accountHolder": "Jean Dupont",
+        "iban": "FR7630006000011234567890189",
+        "swiftBic": "BNPAFRPP"
+      }
+    ]
+  }'
+```
+
+- `accounts` holds at most one account per `kind` and `currency`.
+- `email` is required as soon as the beneficiary has an `EUR` or `USD` bank account: the verification link is sent there.
+- A company sends its documents in `documents`, each as `{ kind, filename, mimeType, base64 }`. The request body can be up to 50 MB.
+
+The response is the saved beneficiary. Keep its `id`: you pass it as `counterpartyId` when you create a payout.
+
+## 2. Approval and verification
+
+A new beneficiary starts with `approvalStatus: "PENDING"`. You can pay it once it is `APPROVED`.
+
+If the beneficiary has an `EUR` or `USD` bank account, we email them a link from our payment partner. They use it to:
+
+1. Verify their identity (individual) or their company and its beneficial owners (company).
+2. Accept our partner's terms of service.
+
+Their `EUR` and `USD` accounts can be paid only once both steps are done. Their other accounts follow the usual approval.
+
+The beneficiary's `verification` object tells you where they are:
+
+```json
+{
+  "verification": {
+    "status": "UNDER_REVIEW",
+    "tosAccepted": false,
+    "nameMismatch": false,
+    "lastSentAt": "2026-11-11T10:15:00.000Z",
+    "rejectionReasons": []
+  }
+}
+```
+
+| `status` | Meaning |
+| --- | --- |
+| `NOT_STARTED` | The beneficiary hasn't opened the link yet. |
+| `IN_PROGRESS` | They started but haven't finished. |
+| `UNDER_REVIEW` | Our partner is reviewing what they sent. |
+| `ACTION_REQUIRED` | Our partner needs more information from them. |
+| `APPROVED` | Verified. Payable once `tosAccepted` is also `true`. |
+| `REJECTED` | Verification refused. `rejectionReasons` says why. Their `EUR` / `USD` accounts can't be paid. |
+| `SUSPENDED` | Our partner suspended the beneficiary. Their `EUR` / `USD` accounts can't be paid. |
+
+`nameMismatch: true` means the same email was already verified under another name. KryptaPay checks it is the same person or company before the verification applies.
+
+<Note>
+  A beneficiary saved before verification existed has `verification: null`. Verification doesn't block their payouts until you send them the link with the call below.
+</Note>
+
+## 3. Resend the link
+
+If the beneficiary lost the email, send the link again:
+
+```bash
+curl -X POST https://staging.api.krypta-pay.com/v1/counterparties/cmh1a2b3c0001xyz/verification \
+  -H "Authorization: Bearer $KRYPTAPAY_API_KEY"
+```
+
+| Code | Status | Meaning |
+| --- | --- | --- |
+| `no_verified_account` | 422 | The beneficiary has no `EUR` or `USD` bank account. |
+| `email_required` | 422 | Add the beneficiary's email first. |
+| `country_not_supported` | 422 | Our partner can't verify beneficiaries living in this country for this currency. |
+| `already_verified` | 409 | Nothing to send: the beneficiary is verified. |
+| `resend_too_soon` | 409 | The link was sent less than 10 minutes ago. |
+| `verification_unavailable` | 409 | Verification is temporarily unavailable. Retry later. |
+| `verification_provider_error` | 502 | Our partner didn't answer. Retry later. |
+
+## Editing a beneficiary
+
+`PATCH /v1/counterparties/{id}` updates a beneficiary. Any change sends it back to `PENDING` until KryptaPay reviews it again. Changing its email starts a new verification at the new address.
+
+## Paying a beneficiary
+
+Pass the beneficiary's `id` as `counterpartyId`, and the account details you saved for it:
+
+```json
+{
+  "amount": "1500",
+  "currency": "EUR",
+  "network": "BANK_EUR",
+  "counterpartyId": "cmh1a2b3c0001xyz",
+  "recipient": { "iban": "FR7630006000011234567890189", "fullName": "Jean Dupont" }
+}
+```
+
+For `BANK_EUR` and `BANK_USD`, `recipient.iban` (or `recipient.accountNumber`) must be the beneficiary's saved account in that currency. Spaces and letter case don't matter. See [Send payouts](/payouts#bank-payouts-in-eur-and-usd) for the errors.
+
+In the sandbox, a beneficiary doesn't need approval or verification to be paid. `counterpartyId` and the matching account are still required for `EUR` and `USD`, so your integration behaves the same in production.

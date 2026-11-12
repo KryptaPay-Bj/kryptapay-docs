@@ -61,7 +61,8 @@ A `201` means the payout was **accepted**, not that the recipient has the money 
 | Mobile Money (e.g. `MTN_BJ`) | `msisdn` | `97000000`, `22997000000` or `+22997000000` |
 | `BANK_NGN` | `accountNumber` + `bankCode` | NUBAN `0123456789`, bank code `044` |
 | Crypto (`ETH`, `POLYGON`, `TRON`) | `address` | Wallet address on that chain |
-| Other bank rails (`BANK_XOF`, `BANK_XAF`, `BANK_GHS`, `BANK_CDF`, `BANK_EUR`, `BANK_USD`) | At least one identifier, e.g. `iban` | Settled manually by KryptaPay today |
+| `BANK_EUR`, `BANK_USD` | `counterpartyId` + the beneficiary's saved `iban` or `accountNumber` | See [Bank payouts in EUR and USD](#bank-payouts-in-eur-and-usd) |
+| Other bank rails (`BANK_XOF`, `BANK_XAF`, `BANK_GHS`, `BANK_CDF`) | At least one identifier, e.g. `iban` | Settled manually by KryptaPay today |
 
 <Warning>
   `recipient.bankName` and `recipient.bankId` are informational only. Use `recipient.bankCode` to identify the bank.
@@ -86,6 +87,39 @@ A `201` means the payout was **accepted**, not that the recipient has the money 
 }
 ```
 </CodeGroup>
+
+### Paying a saved beneficiary
+
+Add `counterpartyId` to pay one of your [beneficiaries](/beneficiaries). KryptaPay then checks the beneficiary before reserving any funds:
+
+| Code | Status | Meaning |
+| --- | --- | --- |
+| `counterparty_not_found` | 422 | No beneficiary with this id in your account. |
+| `counterparty_not_approved` | 422 | The beneficiary is still `PENDING`, or was `REJECTED`. |
+| `counterparty_blacklisted` | 422 | You blacklisted this beneficiary (`isBlacklisted: true`). |
+| `incomplete_counterparty_docs` | 422 | The company hasn't provided its trade register extract and manager's ID. |
+
+These checks run again just before the payout is sent. A beneficiary edited, rejected or blacklisted in between is not paid: the payout stays `PENDING`.
+
+### Bank payouts in EUR and USD
+
+`BANK_EUR` and `BANK_USD` payouts always go to a saved beneficiary whose identity has been verified:
+
+- Send `counterpartyId`. Without it, the payout is refused with `422 counterparty_required`.
+- `recipient.iban` (or `recipient.accountNumber`) must be the beneficiary's saved bank account in that currency. Otherwise: `422 recipient_account_mismatch`.
+- The beneficiary must have completed their [verification](/beneficiaries#2-approval-and-verification). Otherwise: `422 beneficiary_verification_pending`.
+
+```json
+{
+  "amount": "1500",
+  "currency": "EUR",
+  "network": "BANK_EUR",
+  "counterpartyId": "cmh1a2b3c0001xyz",
+  "recipient": { "iban": "FR7630006000011234567890189", "fullName": "Jean Dupont" }
+}
+```
+
+In the sandbox, approval and verification are skipped, but `counterpartyId` and the matching account are still required.
 
 ## 3. Track the result
 
@@ -146,5 +180,7 @@ Funds you receive through a [conversion](/api-reference/fx/convert) into a fiat 
 | `limit_exceeded` | Lower the amount or ask support to raise your limits. |
 | `network_unavailable` | Retry later or use another network. |
 | `duplicate_within_window` | A same payout was sent less than 60 s ago — check `details.existingReference`. |
+| `counterparty_required` | `BANK_EUR` / `BANK_USD`: send the beneficiary's `counterpartyId`. |
+| `beneficiary_verification_pending` | The beneficiary hasn't finished their verification. [Resend the link](/beneficiaries#3-resend-the-link). |
 
 The full list is in [Errors](/errors).
