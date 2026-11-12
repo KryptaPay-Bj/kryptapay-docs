@@ -80,6 +80,8 @@ A body that fails validation (missing or invalid field, wrong type, unmet cross-
 | `counterparty_blacklisted` | 422 | You blacklisted this beneficiary. | Remove it from the blacklist if the payout is intended. |
 | `incomplete_counterparty_docs` | 422 | The company beneficiary is missing its trade register extract or manager's ID. | Add the documents to the beneficiary. |
 | `recipient_account_mismatch` | 422 | The `iban` / `accountNumber` sent isn't the beneficiary's saved account in this currency. | Send the saved account, or update the beneficiary. |
+| `email_used_by_other_entity_type` | 422 | The beneficiary's email is already used to verify an individual (for a company) or a company (for an individual). | Give the beneficiary another email. |
+| `verification_request_rejected` | 422 | Our payment partner refused to create the beneficiary's verification. | Check the beneficiary's name and email, or contact support. |
 | `beneficiary_verification_pending` | 422 | The beneficiary hasn't completed identity verification, required for `EUR` / `USD` bank payouts. | [Resend the verification link](/beneficiaries#3-resend-the-link). |
 | `otp_failed` | 422 | Wrong payin code, or the operator refused the payment. | Let the customer generate a new code and retry. |
 | `otp_unsupported` | 422 | The payin doesn't use a confirmation code. | Don't call confirm-otp unless `otpRequired` was true. |
