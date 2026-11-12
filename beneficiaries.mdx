@@ -42,6 +42,7 @@ curl https://staging.api.krypta-pay.com/v1/counterparties \
 
 - `accounts` holds at most one account per `kind` and `currency`.
 - `email` is required as soon as the beneficiary has an `EUR` or `USD` bank account: the verification link is sent there.
+- An email can be verified as an individual or as a company, not both. Using the same email for the other type returns `422 email_used_by_other_entity_type`: give the company its own address.
 - A company sends its documents in `documents`, each as `{ kind, filename, mimeType, base64 }`. The request body can be up to 50 MB.
 
 The response is the saved beneficiary. Keep its `id`: you pass it as `counterpartyId` when you create a payout.
@@ -101,6 +102,8 @@ curl -X POST https://staging.api.krypta-pay.com/v1/counterparties/cmh1a2b3c0001x
 | `no_verified_account` | 422 | The beneficiary has no `EUR` or `USD` bank account. |
 | `email_required` | 422 | Add the beneficiary's email first. |
 | `country_not_supported` | 422 | Our partner can't verify beneficiaries living in this country for this currency. |
+| `email_used_by_other_entity_type` | 422 | This email is already used to verify the other type (individual or company). Use another email. |
+| `verification_request_rejected` | 422 | Our partner refused the request. Check the beneficiary's name and email, or contact support. |
 | `already_verified` | 409 | Nothing to send: the beneficiary is verified. |
 | `resend_too_soon` | 409 | The link was sent less than 10 minutes ago. |
 | `verification_unavailable` | 409 | Verification is temporarily unavailable. Retry later. |

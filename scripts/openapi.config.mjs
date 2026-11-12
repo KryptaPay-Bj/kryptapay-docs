@@ -352,7 +352,7 @@ export const operations = {
     fields: {
       ...BENEFICIARY_FIELDS,
       'request:entityType': '`INDIVIDUAL` or `BUSINESS` (default). Cannot be changed later.',
-      'request:email': 'Required when the beneficiary has an `EUR` or `USD` bank account: the verification link is sent there.',
+      'request:email': 'Required when the beneficiary has an `EUR` or `USD` bank account: the verification link is sent there. An email already used to verify the other entity type is refused (`422 email_used_by_other_entity_type`).',
       'request:accounts': 'At most one account per `kind` and `currency`.',
       'request:documents': 'Company documents, each `{ kind, filename, mimeType, base64 }`. Not accepted for an `INDIVIDUAL`.',
     },
@@ -403,7 +403,7 @@ export const operations = {
       'Emails the beneficiary a new identity verification link, required before their `EUR` / `USD` bank accounts can be paid.',
       'Use it when they lost the email, or to start verification for a beneficiary saved before it existed.',
       '',
-      'Errors: `no_verified_account`, `email_required`, `country_not_supported` (422); `already_verified`, `resend_too_soon` (less than 10 minutes since the last link), `verification_unavailable` (409); `verification_provider_error` (502).',
+      'Errors: `no_verified_account`, `email_required`, `country_not_supported`, `email_used_by_other_entity_type`, `verification_request_rejected` (422); `already_verified`, `resend_too_soon` (less than 10 minutes since the last link), `verification_unavailable` (409); `verification_provider_error` (502).',
     ].join('\n'),
     scope: 'payouts:write',
     errors: [404, 409, 422, 502],
