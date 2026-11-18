@@ -40,7 +40,7 @@ This guide takes you from zero to a completed sandbox payin. You need a KryptaPa
     Charge a Mobile Money customer. In production they receive a payment prompt on their phone; in sandbox the payment is simulated and no one is charged.
 
     ```bash
-    curl https://staging.api.krypta-pay.com/v1/payins/checkout \
+    curl https://staging.api.krypta-pay.com/v1/payins \
       -H "Authorization: Bearer $KRYPTAPAY_API_KEY" \
       -H "Content-Type: application/json" \
       -d '{

@@ -8,7 +8,7 @@ A **payin** collects money from a customer's Mobile Money wallet into your walle
 ## 1. Create the payin
 
 ```bash
-curl https://staging.api.krypta-pay.com/v1/payins/checkout \
+curl https://staging.api.krypta-pay.com/v1/payins \
   -H "Authorization: Bearer $KRYPTAPAY_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -52,6 +52,12 @@ Save the `reference` with your order. A `201` means the payin was **started**, n
 - XOF, XAF and NGN amounts must be whole numbers.
 - `expiresInSec` ranges from 60 to 86400 seconds.
 - Check [List available networks](/api-reference/networks/list) before showing networks to customers: operators are occasionally under maintenance (`network_unavailable`).
+
+<Warning>
+  `POST /v1/payins/checkout`, the former name of this endpoint, is deprecated and **will no longer accept payins from 1 January 2027**. Until then it behaves exactly like `POST /v1/payins`, and its responses carry `Deprecation: true` and `Sunset: Fri, 01 Jan 2027 00:00:00 GMT` headers. Switch your integration to `POST /v1/payins` before that date: only the URL changes, the request and response stay the same.
+
+  Despite its name, `checkoutUrl` is not a KryptaPay checkout page: it is only set when the operator needs the customer to approve on its own page.
+</Warning>
 
 ## 2. The customer approves
 

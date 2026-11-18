@@ -183,7 +183,7 @@ const transactionExample = {
  */
 export const operations = {
   // ── Payins ────────────────────────────────────────────────────────────
-  'POST /v1/payins/checkout': {
+  'POST /v1/payins/': {
     tag: 'Payins',
     operationId: 'createPayin',
     summary: 'Create a payin',
