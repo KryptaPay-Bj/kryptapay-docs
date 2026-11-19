@@ -8252,6 +8252,196 @@
           }
         }
       }
+    },
+    "/v1/payins/checkout": {
+      "post": {
+        "operationId": "createPayinCheckoutDeprecated",
+        "summary": "Create a payin (deprecated path)",
+        "description": "**Deprecated.** Former path of [Create a payin](/api-reference/payins/create): `POST /v1/payins/checkout` **will no longer accept direct charge payins from 1 January 2027**. Until then it behaves exactly like `POST /v1/payins` and its responses carry a `Deprecation: true` header.\n\nSwitch to `POST /v1/payins`: only the URL changes, the request and response stay the same.\n\n**API key scope:** `payins:write`",
+        "deprecated": true,
+        "tags": [
+          "Payins"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "string",
+                    "pattern": "^\\d+(\\.\\d{1,8})?$",
+                    "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                  },
+                  "currency": {
+                    "$ref": "#/components/schemas/Currency"
+                  },
+                  "network": {
+                    "description": "Mobile Money network to charge. Must match `currency`.",
+                    "$ref": "#/components/schemas/Network"
+                  },
+                  "customer": {
+                    "type": "object",
+                    "properties": {
+                      "fullName": {
+                        "type": "string",
+                        "maxLength": 180
+                      },
+                      "msisdn": {
+                        "type": "string",
+                        "minLength": 6,
+                        "maxLength": 20,
+                        "description": "MSISDN, local or international format (digits only or with a leading \"+\"), e.g. \"97000000\", \"22997000000\", or \"+22997000000\". The wallet that will be charged."
+                      },
+                      "email": {
+                        "type": "string",
+                        "format": "email"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "msisdn"
+                    ]
+                  },
+                  "redirectUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "Where the operator sends the customer back after an operator redirect (`checkoutUrl`)."
+                  },
+                  "expiresInSec": {
+                    "type": "integer",
+                    "minimum": 60,
+                    "maximum": 86400,
+                    "description": "How long the customer has to approve the payment, in seconds (60 to 86400)."
+                  }
+                },
+                "required": [
+                  "amount",
+                  "currency",
+                  "customer",
+                  "network"
+                ],
+                "additionalProperties": false
+              },
+              "example": {
+                "amount": "5000",
+                "currency": "XOF",
+                "network": "MTN_BJ",
+                "customer": {
+                  "fullName": "Awa Koné",
+                  "msisdn": "22997000000",
+                  "email": "awa@example.com"
+                },
+                "redirectUrl": "https://example.com/orders/1042",
+                "expiresInSec": 900
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "reference": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "$ref": "#/components/schemas/TransactionStatus"
+                        },
+                        "amount": {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                        },
+                        "currency": {
+                          "$ref": "#/components/schemas/Currency"
+                        },
+                        "checkoutUrl": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "description": "Operator page to redirect the customer to, for operators that need it. `null` when the customer approves on their phone."
+                        },
+                        "expiresInSec": {
+                          "type": "integer"
+                        },
+                        "otpRequired": {
+                          "type": "boolean",
+                          "description": "True when the operator needs a one-time code from the customer to confirm the payment."
+                        },
+                        "otpInstructions": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "description": "Text to show the customer explaining how to obtain the code."
+                        }
+                      },
+                      "required": [
+                        "reference",
+                        "status",
+                        "amount",
+                        "currency",
+                        "checkoutUrl",
+                        "expiresInSec"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                },
+                "example": {
+                  "ok": true,
+                  "data": {
+                    "reference": "tx_3Jk9QwErTy7uIoPa2Sd",
+                    "status": "PENDING",
+                    "amount": "5000",
+                    "currency": "XOF",
+                    "checkoutUrl": null,
+                    "expiresInSec": 900,
+                    "otpRequired": false,
+                    "otpInstructions": null
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/UpstreamUnavailable"
+          }
+        }
+      }
     }
   },
   "components": {

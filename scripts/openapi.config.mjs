@@ -180,6 +180,7 @@ const transactionExample = {
  *  - fields:   { 'request:a.b' | 'response:a.b' | 'param:name': description }
  *  - required: { 'request' | 'request:a.b': [...] } fields to mark required (added to the internal list)
  *  - dropParams / dropResponse: query params / response fields to hide
+ *  - deprecated: true marks the operation deprecated in the published spec
  */
 export const operations = {
   // ── Payins ────────────────────────────────────────────────────────────
@@ -575,4 +576,18 @@ export const operations = {
     description: 'Live status of KryptaPay services. Public — no API key needed.',
     auth: 'none',
   },
+}
+
+// Former name of "Create a payin": same request and response, listed as
+// deprecated until direct charge stops on this path (1 January 2027).
+operations['POST /v1/payins/checkout'] = {
+  ...operations['POST /v1/payins/'],
+  operationId: 'createPayinCheckoutDeprecated',
+  summary: 'Create a payin (deprecated path)',
+  deprecated: true,
+  description: [
+    '**Deprecated.** Former path of [Create a payin](/api-reference/payins/create): `POST /v1/payins/checkout` **will no longer accept direct charge payins from 1 January 2027**. Until then it behaves exactly like `POST /v1/payins` and its responses carry a `Deprecation: true` header.',
+    '',
+    'Switch to `POST /v1/payins`: only the URL changes, the request and response stay the same.',
+  ].join('\n'),
 }
