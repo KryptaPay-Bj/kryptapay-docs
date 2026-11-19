@@ -228,6 +228,7 @@ function transformOperation(key, internalOp, opCfg, enums) {
     operationId: opCfg.operationId,
     summary: opCfg.summary,
     ...(description && { description }),
+    ...(opCfg.deprecated && { deprecated: true }),
     tags: [opCfg.tag],
     ...(auth === 'none' && { security: [] }),
     ...(op.parameters.length && { parameters: op.parameters }),

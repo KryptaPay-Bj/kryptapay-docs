@@ -65,7 +65,8 @@
             "pages": [
               "api-reference/payins/create",
               "api-reference/payins/confirm-otp",
-              "api-reference/payins/get"
+              "api-reference/payins/get",
+              "api-reference/payins/create-checkout"
             ]
           },
           {
