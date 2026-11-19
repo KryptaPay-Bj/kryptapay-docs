@@ -1,0 +1,111 @@
+---
+title: "Bank and stablecoin deposits"
+description: "Fund your wallets by bank transfer or stablecoin. KryptaPay reviews each deposit before crediting it."
+---
+
+A **deposit** funds one of your wallets with money you send to KryptaPay yourself, outside the API: a **bank transfer** or a **stablecoin** transfer (USDC, USDT). You then declare it, and KryptaPay credits your wallet **after checking that the money arrived**.
+
+<Info>
+  Collecting from a customer's Mobile Money wallet is a [payin](/payins), not a deposit. Payins only accept Mobile Money networks: a bank or stablecoin network there returns `422`.
+</Info>
+
+Declaring deposits needs a key with the `payins:write` [scope](/authentication#scopes).
+
+## Bank transfer
+
+### 1. Get the bank details
+
+```bash
+curl "https://staging.api.krypta-pay.com/v1/collect-accounts?country=BJ" \
+  -H "Authorization: Bearer $KRYPTAPAY_API_KEY"
+```
+
+Each account comes with its currency, IBAN or account number, BIC/SWIFT and `notes` to follow for the transfer. An empty `items` list means no KryptaPay account is open in that country yet: contact support. See [List KryptaPay bank accounts](/api-reference/deposits/bank-accounts).
+
+<Warning>
+  Always take the bank details from this endpoint, never from an example or an old email.
+</Warning>
+
+### 2. Send the transfer, then declare it
+
+Once the transfer is sent, declare it with the receipt as `proof` (PDF, JPEG, PNG or WebP, base64-encoded):
+
+```bash
+curl https://staging.api.krypta-pay.com/v1/deposits \
+  -H "Authorization: Bearer $KRYPTAPAY_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel": "BANK",
+    "currency": "XOF",
+    "declaredAmount": "2500000",
+    "bankName": "Ecobank Bénin",
+    "payerName": "Awa Koné SARL",
+    "proof": { "filename": "wire-receipt.pdf", "mimeType": "application/pdf", "base64": "JVBERi0xLjcKJc..." }
+  }'
+```
+
+The response holds the deposit `id`, a `reference` (`dep_…`) and a `ticketRef` (`DEP-…`) to quote to support. The whole request must stay under 15 MB.
+
+Forgot the receipt, or need to replace it? [Attach a proof](/api-reference/deposits/attach-proof) while the deposit is still `PENDING`.
+
+## Stablecoin
+
+### 1. Get the deposit address
+
+```bash
+curl "https://staging.api.krypta-pay.com/v1/deposits/stablecoin-address?asset=USDT&network=TRON" \
+  -H "Authorization: Bearer $KRYPTAPAY_API_KEY"
+```
+
+`asset` is `USDC` or `USDT`; `network` is `ETH`, `POLYGON` or `TRON`. `404 no_address` means no address is open for that pair.
+
+<Warning>
+  Send **only** the requested asset, **only** on the requested network. Funds sent with another asset or on another network may be lost. Always read the address from this endpoint.
+</Warning>
+
+### 2. Send on-chain, then declare it
+
+A stablecoin deposit needs no file: the transaction hash is the proof.
+
+```bash
+curl https://staging.api.krypta-pay.com/v1/deposits \
+  -H "Authorization: Bearer $KRYPTAPAY_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel": "STABLECOIN",
+    "currency": "USDT",
+    "declaredAmount": "1500",
+    "network": "TRON",
+    "txHash": "9f2c1e7a4b3d8f6e5a2c1b0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f"
+  }'
+```
+
+`currency` is the asset you sent: the deposit credits your `USDC` or `USDT` wallet.
+
+## Review and crediting
+
+Every deposit is **reviewed by KryptaPay** before your wallet is credited:
+
+| `status` | Meaning |
+| --- | --- |
+| `PENDING` | Declared, waiting for KryptaPay to confirm the money arrived. |
+| `APPROVED` | Confirmed: your wallet is credited with `confirmedAmount`, the amount actually received. It also appears in your [transactions](/api-reference/transactions/list). |
+| `REJECTED` | Not credited. `decisionNote` explains why. |
+
+No webhook is sent for deposits. Poll [Get a deposit](/api-reference/deposits/get) with its `id`, `reference` or `ticketRef`, or [list your deposits](/api-reference/deposits/list).
+
+`confirmedAmount` can be lower than `declaredAmount` when banks or the network took fees on the way.
+
+## In sandbox
+
+The sandbox accepts deposit declarations so you can test your integration, but no money moves: a sandbox deposit stays `PENDING` unless you ask support to approve or reject it to test how you handle the result. A sandbox key is refused on the production API (`403 env_mismatch`).
+
+## Common errors
+
+| Code | Status | Meaning |
+| --- | --- | --- |
+| `validation_error` | 422 | A required field is missing, e.g. `proof` for a bank transfer, or `txHash` for a stablecoin transfer. |
+| `too_large`, `mime_not_allowed` | 422 | The proof file is too big or not an accepted type. |
+| `bad_status` | 409 | You tried to attach a proof to a deposit KryptaPay has already reviewed. |
+| `no_address` | 404 | No stablecoin address is open for that asset and network. |
+| `not_found` | 404 | No deposit with that id, `reference` or `ticketRef` on your account. |

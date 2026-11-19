@@ -164,8 +164,20 @@ function transformOperation(key, internalOp, opCfg, enums) {
   // Request body
   const body = jsonOf(op.requestBody)
   if (body?.schema) {
-    removeProperties(body.schema, cfg.stripRequestProperties)
+    removeProperties(body.schema, [...cfg.stripRequestProperties, ...(opCfg.dropRequest ?? [])])
     if (opCfg.requestExample) body.example = opCfg.requestExample
+  }
+  // Narrow an enum to the values integrators should send (the internal enum
+  // may carry dashboard-only or legacy values). Each value must exist.
+  for (const [path, values] of Object.entries(opCfg.enumOnly ?? {})) {
+    const [where, dotted] = path.split(':')
+    const target =
+      where === 'request' ? resolve(body?.schema, dotted)
+      : where === 'param' ? op.parameters?.find((p) => p.name === dotted)?.schema
+      : undefined
+    const unknown = values.filter((v) => !target?.enum?.includes(v))
+    if (!target?.enum || unknown.length) fail(`${key}: enumOnly "${path}" → ${unknown.join(', ') || 'no enum found'}`)
+    else target.enum = [...values]
   }
   for (const [path, names] of Object.entries(opCfg.required ?? {})) {
     const [, dotted] = path.split(':')
