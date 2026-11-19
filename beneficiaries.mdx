@@ -41,6 +41,7 @@ curl https://staging.api.krypta-pay.com/v1/counterparties \
 ```
 
 - `accounts` holds at most one account per `kind` and `currency`.
+- A stablecoin account is `{ "kind": "STABLECOIN", "currency": "USDT", "stablecoinAsset": "USDT", "walletChain": "TRON", "walletAddress": "…" }`, with `currency` and `stablecoinAsset` set to `USDC` or `USDT`.
 - `email` is required as soon as the beneficiary has an `EUR` or `USD` bank account: the verification link is sent there.
 - An email can be verified as an individual or as a company, not both. Using the same email for the other type returns `422 email_used_by_other_entity_type`: give the company its own address.
 - A company sends its documents in `documents`, each as `{ kind, filename, mimeType, base64 }`. The request body can be up to 50 MB.

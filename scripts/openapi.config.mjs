@@ -93,6 +93,18 @@ const BENEFICIARY_FIELDS = {
   'response:verificationRequiredAt': 'When set, the beneficiary\'s EUR / USD bank accounts can only be paid once `verification` is `APPROVED` with `tosAccepted: true`.',
   'response:verification': 'Identity verification for EUR / USD bank accounts. `null` until a verification link is sent.',
 }
+// Beneficiary account input: publish only the current names. The api still
+// accepts the former kind `CRYPTO` and field `cryptoAsset`, undocumented.
+const BENEFICIARY_ACCOUNT_INPUT = {
+  dropRequest: ['cryptoAsset'],
+  enumOnly: { 'request:accounts.kind': ['BANK', 'MOMO', 'STABLECOIN'] },
+}
+const BENEFICIARY_ACCOUNT_FIELDS = {
+  'request:accounts.kind': '`BANK`, `MOMO` (mobile money) or `STABLECOIN`.',
+  'request:accounts.walletChain': '`STABLECOIN`: network of the address (`ETH`, `POLYGON` or `TRON`).',
+  'request:accounts.walletAddress': '`STABLECOIN`: recipient address on that network.',
+  'request:accounts.stablecoinAsset': '`STABLECOIN`: `USDC` or `USDT`.',
+}
 // Same descriptions for a list page, whose beneficiaries sit in `data.items`.
 const BENEFICIARY_LIST_FIELDS = Object.fromEntries(
   Object.entries(BENEFICIARY_FIELDS).map(([k, v]) => [k.replace('response:', 'response:items.'), v]),
@@ -507,8 +519,10 @@ export const operations = {
     ].join('\n'),
     scope: 'payouts:write',
     errors: [422],
+    ...BENEFICIARY_ACCOUNT_INPUT,
     fields: {
       ...BENEFICIARY_FIELDS,
+      ...BENEFICIARY_ACCOUNT_FIELDS,
       'request:entityType': '`INDIVIDUAL` or `BUSINESS` (default). Cannot be changed later.',
       'request:email': 'Required when the beneficiary has an `EUR` or `USD` bank account: the verification link is sent there. An email already used to verify the other entity type is refused (`422 email_used_by_other_entity_type`).',
       'request:accounts': 'At most one account per `kind` and `currency`.',
@@ -548,7 +562,8 @@ export const operations = {
     ].join('\n'),
     scope: 'payouts:write',
     errors: [404, 422],
-    fields: { ...BENEFICIARY_FIELDS, 'param:id': 'Beneficiary id.' },
+    ...BENEFICIARY_ACCOUNT_INPUT,
+    fields: { ...BENEFICIARY_FIELDS, ...BENEFICIARY_ACCOUNT_FIELDS, 'param:id': 'Beneficiary id.' },
     dropResponse: BENEFICIARY_DROP,
     requestExample: { email: 'j.dupont@example.com' },
     responseExample: { ok: true, data: { ...beneficiaryExample, email: 'j.dupont@example.com' } },
