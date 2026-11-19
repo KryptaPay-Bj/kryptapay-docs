@@ -201,8 +201,45 @@ const depositExample = {
   confirmedAmount: null,
   decisionNote: null,
   reviewedAt: null,
+  expiresAt: null,
+  payerCountry: null,
+  feeBps: null,
+  feeAmount: null,
+  creditedAmount: null,
   createdAt: '2026-11-19T09:30:00.000Z',
 }
+
+// GIMAC deposit, just declared: the payer has 30 minutes (indicative) to pay.
+const gimacDepositExample = {
+  ...depositExample,
+  id: 'cmdepg7h3k0000s60fz9y8x7w6',
+  reference: 'dep_Gm4Qx8Lw2Rt6Yp0Zs3',
+  ticketRef: 'DEP-2026-11-G4Q8LW',
+  channel: 'GIMAC',
+  currency: 'XAF',
+  declaredAmount: '50000',
+  bankName: null,
+  payerName: 'Paul Mbarga',
+  hasProof: false,
+  expiresAt: '2026-11-19T10:00:00.000Z',
+  payerCountry: 'CM',
+  feeBps: 200,
+}
+
+// Deposit fields that only some channels fill.
+const DEPOSIT_RESPONSE_FIELDS = {
+  'response:ticketRef': 'Reference to quote to support. For `GIMAC`, the payer puts it in the payment description.',
+  'response:expiresAt': '`GIMAC`: indicative payment deadline (30 minutes). A late payment can still be approved. `null` otherwise.',
+  'response:payerCountry': '`GIMAC`: CEMAC country of the paying account. `null` otherwise.',
+  'response:feeBps': '`GIMAC`: entry fee rate in basis points (200 = 2 %), fixed at declaration. `null` otherwise.',
+  'response:feeAmount': '`GIMAC`, once `APPROVED`: fee deducted from `confirmedAmount`. `null` otherwise.',
+  'response:creditedAmount': '`GIMAC`, once `APPROVED`: net amount credited to your wallet. `null` otherwise.',
+}
+const DEPOSIT_LIST_FIELDS = Object.fromEntries(
+  Object.entries(DEPOSIT_RESPONSE_FIELDS).map(([k, v]) => [k.replace('response:', 'response:items.'), v]),
+)
+// Deposit review outcome, for the operation descriptions.
+const DEPOSIT_REVIEW = 'Every deposit is **reviewed by KryptaPay** before your wallet is credited: it starts `PENDING`, then becomes `APPROVED` (wallet credited) or `REJECTED`. You receive the `DEPOSIT_APPROVED` / `DEPOSIT_REJECTED` [webhook](/webhooks), or poll [Get a deposit](/api-reference/deposits/get).'
 
 /**
  * Public operations, keyed "METHOD /internal/path" exactly as in the internal spec.
@@ -216,6 +253,7 @@ const depositExample = {
  *  - deprecated: true marks the operation deprecated in the published spec
  *  - dropRequest: request-body fields to hide (dashboard-only for this operation)
  *  - enumOnly:   { 'request:a.b' | 'param:name': [...] } narrow an enum to the values integrators send
+ *  - binaryResponse: { contentTypes: [...], description } for a route that returns a file
  */
 export const operations = {
   // ── Payins ────────────────────────────────────────────────────────────
@@ -310,7 +348,7 @@ export const operations = {
     },
   },
 
-  // ── Deposits (bank transfer, stablecoin) ─────────────────────────────
+  // ── Deposits (bank transfer, stablecoin, GIMAC) ──────────────────────
   'GET /v1/collect-accounts/': {
     tag: 'Deposits',
     operationId: 'listDepositBankAccounts',
@@ -350,6 +388,48 @@ export const operations = {
       data: { asset: 'USDT', network: 'TRON', address: 'TEXAMPLEADDRESSxxxxxxxxxxxxxxxxxx', label: 'KryptaPay USDT TRON' },
     },
   },
+  'GET /v1/deposits/gimac': {
+    tag: 'Deposits',
+    operationId: 'getGimacDepositDetails',
+    summary: 'Get the GIMAC payment details',
+    description: [
+      'What a payer needs to pay KryptaPay by GIMAC from a bank or mobile money account in the CEMAC zone: the merchant name and code, whether a QR code is available, and the entry fee for each country.',
+      '',
+      'Check `available` before offering GIMAC: when it is `false`, [declaring a GIMAC deposit](/api-reference/deposits/create) returns `409 gimac_unavailable`.',
+    ].join('\n'),
+    dropResponse: ['outBps'],
+    fields: {
+      'response:available': 'Whether GIMAC deposits can be declared right now.',
+      'response:currency': 'Always `XAF`.',
+      'response:merchantName': 'Merchant name the payer sees in their app.',
+      'response:merchantCode': 'Merchant code to enter when the payer cannot scan the QR code.',
+      'response:hasQr': 'Whether [Get the GIMAC QR code](/api-reference/deposits/gimac-qr) returns an image.',
+      'response:qrUpdatedAt': 'When the QR code last changed. Add it to the image URL (`?v=…`) to refresh a cached copy.',
+      'response:expiryMinutes': 'Indicative time the payer has to pay after the deposit is declared.',
+      'response:countries': 'CEMAC countries a payer can pay from (ISO 3166-1 alpha-2).',
+      'response:fees': 'Entry fee per country, in basis points (`inBps`, 200 = 2 %), deducted from the amount received.',
+    },
+    responseExample: {
+      ok: true,
+      data: {
+        available: true, currency: 'XAF', merchantName: 'KRYPTAPAY', merchantCode: 'EXAMPLE123',
+        hasQr: true, qrUpdatedAt: '2026-11-13T08:00:00.000Z', expiryMinutes: 30,
+        countries: ['CM', 'CG', 'GA', 'TD', 'CF', 'GQ'],
+        fees: {
+          CM: { inBps: 200 }, CG: { inBps: 400 }, GA: { inBps: 220 },
+          TD: { inBps: 250 }, CF: { inBps: 220 }, GQ: { inBps: 250 },
+        },
+      },
+    },
+  },
+  'GET /v1/deposits/gimac/qr': {
+    tag: 'Deposits',
+    operationId: 'getGimacQrCode',
+    summary: 'Get the GIMAC QR code',
+    description: 'The KryptaPay GIMAC QR code, as an image to show to the payer next to the amount and the `ticketRef` of the deposit you declared. `404 not_found` when GIMAC is off or no QR code is set: show `merchantCode` instead.',
+    errors: [404],
+    binaryResponse: { contentTypes: ['image/png', 'image/jpeg', 'image/webp'], description: 'The QR code image.' },
+  },
   'POST /v1/deposits/': {
     tag: 'Deposits',
     operationId: 'createDeposit',
@@ -359,26 +439,30 @@ export const operations = {
       '',
       '- **Bank transfer** (`BANK`): wire to an account from [List KryptaPay bank accounts](/api-reference/deposits/bank-accounts), then declare it with the transfer receipt in `proof`.',
       '- **Stablecoin** (`STABLECOIN`): send USDC or USDT to the address from [Get the stablecoin deposit address](/api-reference/deposits/stablecoin-address), then declare it with `network` and `txHash`.',
+      '- **GIMAC** (`GIMAC`, XAF only): declare it **before** the payment, with `payerCountry`. Then show the payer the [QR code](/api-reference/deposits/gimac-qr) or the merchant code, the amount and the `ticketRef` to put in the payment description.',
       '',
-      'Every deposit is **reviewed by KryptaPay** before your wallet is credited: it starts `PENDING`, then becomes `APPROVED` (wallet credited with `confirmedAmount`) or `REJECTED`. No webhook is sent: poll [Get a deposit](/api-reference/deposits/get).',
+      DEPOSIT_REVIEW,
+      'For `GIMAC`, the entry fee of the payer\'s country is deducted: `creditedAmount` is what reaches your wallet.',
       '',
       'Mobile Money collections are not declared here: use [Create a payin](/api-reference/payins/create).',
     ].join('\n'),
     scope: 'payins:write',
     errors: [409, 422],
-    dropRequest: ['payerPhone', 'payerCountry'],
-    enumOnly: { 'request:channel': ['BANK', 'STABLECOIN'], 'request:network': ['ETH', 'POLYGON', 'TRON'] },
+    dropRequest: ['payerPhone'],
+    enumOnly: { 'request:channel': ['BANK', 'STABLECOIN', 'GIMAC'], 'request:network': ['ETH', 'POLYGON', 'TRON'] },
     fields: {
-      'request:channel': '`BANK` for a bank transfer, `STABLECOIN` for a USDC / USDT transfer.',
-      'request:currency': 'Wallet to credit. For `STABLECOIN`, the asset you sent (`USDC` or `USDT`).',
-      'request:declaredAmount': 'Amount you sent, as a decimal string. KryptaPay credits the amount actually received (`confirmedAmount`).',
+      ...DEPOSIT_RESPONSE_FIELDS,
+      'request:channel': '`BANK` for a bank transfer, `STABLECOIN` for a USDC / USDT transfer, `GIMAC` for a GIMAC payment in the CEMAC zone.',
+      'request:currency': 'Wallet to credit. For `STABLECOIN`, the asset you sent (`USDC` or `USDT`). For `GIMAC`, `XAF`.',
+      'request:declaredAmount': 'Amount sent (or, for `GIMAC`, to be paid), as a decimal string. KryptaPay credits the amount actually received (`confirmedAmount`).',
       'request:bankName': '`BANK`: bank the transfer was sent from.',
-      'request:payerName': '`BANK`: name of the account holder who sent the transfer.',
+      'request:payerName': '`BANK`: name of the account holder who sent the transfer. `GIMAC`: name of the payer (optional, helps KryptaPay match the payment).',
+      'request:payerCountry': '`GIMAC` (required): CEMAC country of the paying account. It sets the entry fee, see [Get the GIMAC payment details](/api-reference/deposits/gimac).',
       'request:network': '`STABLECOIN`: network the transfer was sent on.',
       'request:txHash': '`STABLECOIN`: transaction hash. Replaces `proof` for stablecoin deposits.',
-      'request:proof': 'Proof of the transfer (bank receipt, statement extract…), base64-encoded. Required for `BANK`. PDF, JPEG, PNG or WebP; the whole request must stay under 15 MB.',
+      'request:proof': 'Proof of the transfer (bank receipt, statement extract…), base64-encoded. Required for `BANK`, not needed for `GIMAC`. PDF, JPEG, PNG or WebP; the whole request must stay under 15 MB.',
     },
-    dropResponse: ['payerPhone', 'expiresAt', 'payerCountry', 'feeBps', 'feeAmount', 'creditedAmount'],
+    dropResponse: ['payerPhone'],
     requestExample: {
       channel: 'BANK',
       currency: 'XOF',
@@ -394,7 +478,8 @@ export const operations = {
     operationId: 'listDeposits',
     summary: 'List deposits',
     description: 'Your declared deposits, most recent first. Pass `nextCursor` as `cursor` to get the next page.',
-    dropResponse: ['payerPhone', 'expiresAt', 'payerCountry', 'feeBps', 'feeAmount', 'creditedAmount'],
+    fields: DEPOSIT_LIST_FIELDS,
+    dropResponse: ['payerPhone'],
     responseExample: {
       ok: true,
       data: {
@@ -404,6 +489,10 @@ export const operations = {
             channel: 'STABLECOIN', currency: 'USDT', declaredAmount: '1500', bankName: null, payerName: null,
             network: 'TRON', txHash: '9f2c1e7a4b3d8f6e5a2c1b0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f', hasProof: false,
             status: 'APPROVED', confirmedAmount: '1500', reviewedAt: '2026-11-19T11:02:00.000Z', createdAt: '2026-11-19T10:41:00.000Z',
+          },
+          {
+            ...gimacDepositExample, status: 'APPROVED', confirmedAmount: '50000',
+            feeAmount: '1000', creditedAmount: '49000', reviewedAt: '2026-11-19T09:58:00.000Z', createdAt: '2026-11-19T09:31:00.000Z',
           },
           depositExample,
         ],
@@ -415,10 +504,10 @@ export const operations = {
     tag: 'Deposits',
     operationId: 'getDeposit',
     summary: 'Get a deposit',
-    description: 'One deposit, by `id`, `reference` (`dep_…`) or `ticketRef` (`DEP-…`). Poll it to know when KryptaPay has reviewed it.',
+    description: 'One deposit, by `id`, `reference` (`dep_…`) or `ticketRef` (`DEP-…`). Use it to confirm a `DEPOSIT_APPROVED` / `DEPOSIT_REJECTED` webhook, or poll it until KryptaPay has reviewed the deposit.',
     errors: [404],
-    fields: { 'param:id': 'Deposit id, `reference` or `ticketRef`.' },
-    dropResponse: ['payerPhone', 'expiresAt', 'payerCountry', 'feeBps', 'feeAmount', 'creditedAmount'],
+    fields: { ...DEPOSIT_RESPONSE_FIELDS, 'param:id': 'Deposit id, `reference` or `ticketRef`.' },
+    dropResponse: ['payerPhone'],
     responseExample: {
       ok: true,
       data: { ...depositExample, status: 'APPROVED', confirmedAmount: '2500000', reviewedAt: '2026-11-19T14:12:00.000Z' },
@@ -431,8 +520,8 @@ export const operations = {
     description: 'Adds or replaces the proof of a deposit that is still `PENDING`. `409 bad_status` once KryptaPay has reviewed it.',
     scope: 'payins:write',
     errors: [404, 409, 422],
-    fields: { 'param:id': 'Deposit id, `reference` or `ticketRef`.' },
-    dropResponse: ['payerPhone', 'expiresAt', 'payerCountry', 'feeBps', 'feeAmount', 'creditedAmount'],
+    fields: { ...DEPOSIT_RESPONSE_FIELDS, 'param:id': 'Deposit id, `reference` or `ticketRef`.' },
+    dropResponse: ['payerPhone'],
     requestExample: { proof: { filename: 'statement-extract.png', mimeType: 'image/png', base64: 'iVBORw0KGgo...' } },
     responseExample: { ok: true, data: depositExample },
   },

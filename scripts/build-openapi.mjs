@@ -192,6 +192,14 @@ function transformOperation(key, internalOp, opCfg, enums) {
   if (opCfg.response) {
     op.responses[code ?? '200'] = { description: 'Success', content: { 'application/json': { schema: clone(opCfg.response) } } }
   }
+  // A route that streams a file (no JSON schema in the internal spec).
+  if (opCfg.binaryResponse) {
+    const { contentTypes, description } = opCfg.binaryResponse
+    op.responses[code ?? '200'] = {
+      description,
+      content: Object.fromEntries(contentTypes.map((t) => [t, { schema: { type: 'string', format: 'binary' } }])),
+    }
+  }
   const success = op.responses[successCode(op)]
   if (success.description === 'Default Response') success.description = 'Success'
   if (opCfg.dropResponse) {

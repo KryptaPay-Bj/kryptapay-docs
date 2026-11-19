@@ -170,13 +170,15 @@ if (!isValid) {
 
 | Event | Description |
 | --- | --- |
-| `PAYIN_CREATED` | A new payin (deposit) has been created and is pending or processing. |
+| `PAYIN_CREATED` | A new payin has been created and is pending or processing. |
 | `PAYIN_RECEIVED` | The payin was successfully received and credited. |
 | `PAYIN_FAILED` | The payin failed. |
 | `PAYOUT_CREATED` | A new payout has been created and is awaiting execution. |
 | `PAYOUT_COMPLETED` | The payout was successfully executed. |
 | `PAYOUT_FAILED` | The payout failed. |
 | `CONVERSION_COMPLETED` | A currency conversion between two of your wallets completed. |
+| `DEPOSIT_APPROVED` | KryptaPay approved a [deposit](/deposits) (bank, stablecoin or GIMAC): your wallet is credited. |
+| `DEPOSIT_REJECTED` | KryptaPay rejected a deposit: nothing is credited. |
 
 <Info>
   There is no intermediate "processing" event for payins or payouts today — you'll receive `*_CREATED` at creation, then a terminal `*_RECEIVED`/`*_COMPLETED`/`*_FAILED` event once the transaction settles.
@@ -194,6 +196,9 @@ The `data` object's fields depend on the event type:
 | `PAYOUT_COMPLETED` | `transaction_id`, `reference`, `amount`, `currency`, `network`, `status`, `provider_ref` |
 | `PAYOUT_FAILED` | Same as `PAYOUT_COMPLETED`, plus `failure_code` and `failure_reason` |
 | `CONVERSION_COMPLETED` | `transaction_id`, `reference`, `from_currency`, `to_currency`, `from_amount`, `to_amount`, `status` |
+| `DEPOSIT_APPROVED`, `DEPOSIT_REJECTED` | `deposit_id`, `reference`, `ticket_ref`, `channel`, `currency`, `status`, `declared_amount`, `confirmed_amount`, `fee_amount`, `credited_amount`, `payer_country`, `decision_note`, `reviewed_at` |
+
+For a deposit, `credited_amount` is what reached your wallet: `confirmed_amount` minus `fee_amount` (the GIMAC entry fee, `"0"` for other channels). The three amounts are `null` on `DEPOSIT_REJECTED`.
 
 `amount`/`from_amount`/`to_amount` are decimal strings (e.g. `"10000"` or `"150.50"`), not minor units.
 

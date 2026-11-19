@@ -840,11 +840,219 @@
         }
       }
     },
+    "/v1/deposits/gimac": {
+      "get": {
+        "operationId": "getGimacDepositDetails",
+        "summary": "Get the GIMAC payment details",
+        "description": "What a payer needs to pay KryptaPay by GIMAC from a bank or mobile money account in the CEMAC zone: the merchant name and code, whether a QR code is available, and the entry fee for each country.\n\nCheck `available` before offering GIMAC: when it is `false`, [declaring a GIMAC deposit](/api-reference/deposits/create) returns `409 gimac_unavailable`.",
+        "tags": [
+          "Deposits"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "available": {
+                          "type": "boolean",
+                          "description": "Whether GIMAC deposits can be declared right now."
+                        },
+                        "currency": {
+                          "type": "string",
+                          "description": "Always `XAF`."
+                        },
+                        "merchantName": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "description": "Merchant name the payer sees in their app."
+                        },
+                        "merchantCode": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "description": "Merchant code to enter when the payer cannot scan the QR code."
+                        },
+                        "hasQr": {
+                          "type": "boolean",
+                          "description": "Whether [Get the GIMAC QR code](/api-reference/deposits/gimac-qr) returns an image."
+                        },
+                        "qrUpdatedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "description": "When the QR code last changed. Add it to the image URL (`?v=…`) to refresh a cached copy."
+                        },
+                        "expiryMinutes": {
+                          "type": "number",
+                          "description": "Indicative time the payer has to pay after the deposit is declared."
+                        },
+                        "countries": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "CEMAC countries a payer can pay from (ISO 3166-1 alpha-2)."
+                        },
+                        "fees": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "inBps": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "inBps"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "Entry fee per country, in basis points (`inBps`, 200 = 2 %), deducted from the amount received."
+                        }
+                      },
+                      "required": [
+                        "available",
+                        "currency",
+                        "merchantName",
+                        "merchantCode",
+                        "hasQr",
+                        "qrUpdatedAt",
+                        "expiryMinutes",
+                        "countries",
+                        "fees"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                },
+                "example": {
+                  "ok": true,
+                  "data": {
+                    "available": true,
+                    "currency": "XAF",
+                    "merchantName": "KRYPTAPAY",
+                    "merchantCode": "EXAMPLE123",
+                    "hasQr": true,
+                    "qrUpdatedAt": "2026-11-13T08:00:00.000Z",
+                    "expiryMinutes": 30,
+                    "countries": [
+                      "CM",
+                      "CG",
+                      "GA",
+                      "TD",
+                      "CF",
+                      "GQ"
+                    ],
+                    "fees": {
+                      "CM": {
+                        "inBps": 200
+                      },
+                      "CG": {
+                        "inBps": 400
+                      },
+                      "GA": {
+                        "inBps": 220
+                      },
+                      "TD": {
+                        "inBps": 250
+                      },
+                      "CF": {
+                        "inBps": 220
+                      },
+                      "GQ": {
+                        "inBps": 250
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/v1/deposits/gimac/qr": {
+      "get": {
+        "operationId": "getGimacQrCode",
+        "summary": "Get the GIMAC QR code",
+        "description": "The KryptaPay GIMAC QR code, as an image to show to the payer next to the amount and the `ticketRef` of the deposit you declared. `404 not_found` when GIMAC is off or no QR code is set: show `merchantCode` instead.",
+        "tags": [
+          "Deposits"
+        ],
+        "responses": {
+          "200": {
+            "description": "The QR code image.",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
     "/v1/deposits": {
       "post": {
         "operationId": "createDeposit",
         "summary": "Declare a deposit",
-        "description": "Declares money you sent to KryptaPay **outside** the API, so it can be credited to your wallet in `currency`:\n\n- **Bank transfer** (`BANK`): wire to an account from [List KryptaPay bank accounts](/api-reference/deposits/bank-accounts), then declare it with the transfer receipt in `proof`.\n- **Stablecoin** (`STABLECOIN`): send USDC or USDT to the address from [Get the stablecoin deposit address](/api-reference/deposits/stablecoin-address), then declare it with `network` and `txHash`.\n\nEvery deposit is **reviewed by KryptaPay** before your wallet is credited: it starts `PENDING`, then becomes `APPROVED` (wallet credited with `confirmedAmount`) or `REJECTED`. No webhook is sent: poll [Get a deposit](/api-reference/deposits/get).\n\nMobile Money collections are not declared here: use [Create a payin](/api-reference/payins/create).\n\n**API key scope:** `payins:write`",
+        "description": "Declares money you sent to KryptaPay **outside** the API, so it can be credited to your wallet in `currency`:\n\n- **Bank transfer** (`BANK`): wire to an account from [List KryptaPay bank accounts](/api-reference/deposits/bank-accounts), then declare it with the transfer receipt in `proof`.\n- **Stablecoin** (`STABLECOIN`): send USDC or USDT to the address from [Get the stablecoin deposit address](/api-reference/deposits/stablecoin-address), then declare it with `network` and `txHash`.\n- **GIMAC** (`GIMAC`, XAF only): declare it **before** the payment, with `payerCountry`. Then show the payer the [QR code](/api-reference/deposits/gimac-qr) or the merchant code, the amount and the `ticketRef` to put in the payment description.\n\nEvery deposit is **reviewed by KryptaPay** before your wallet is credited: it starts `PENDING`, then becomes `APPROVED` (wallet credited) or `REJECTED`. You receive the `DEPOSIT_APPROVED` / `DEPOSIT_REJECTED` [webhook](/webhooks), or poll [Get a deposit](/api-reference/deposits/get).\nFor `GIMAC`, the entry fee of the payer's country is deducted: `creditedAmount` is what reaches your wallet.\n\nMobile Money collections are not declared here: use [Create a payin](/api-reference/payins/create).\n\n**API key scope:** `payins:write`",
         "tags": [
           "Deposits"
         ],
@@ -858,18 +1066,19 @@
                     "type": "string",
                     "enum": [
                       "BANK",
-                      "STABLECOIN"
+                      "STABLECOIN",
+                      "GIMAC"
                     ],
-                    "description": "`BANK` for a bank transfer, `STABLECOIN` for a USDC / USDT transfer."
+                    "description": "`BANK` for a bank transfer, `STABLECOIN` for a USDC / USDT transfer, `GIMAC` for a GIMAC payment in the CEMAC zone."
                   },
                   "currency": {
-                    "description": "Wallet to credit. For `STABLECOIN`, the asset you sent (`USDC` or `USDT`).",
+                    "description": "Wallet to credit. For `STABLECOIN`, the asset you sent (`USDC` or `USDT`). For `GIMAC`, `XAF`.",
                     "$ref": "#/components/schemas/Currency"
                   },
                   "declaredAmount": {
                     "type": "string",
                     "pattern": "^\\d+(\\.\\d{1,8})?$",
-                    "description": "Amount you sent, as a decimal string. KryptaPay credits the amount actually received (`confirmedAmount`)."
+                    "description": "Amount sent (or, for `GIMAC`, to be paid), as a decimal string. KryptaPay credits the amount actually received (`confirmedAmount`)."
                   },
                   "bankName": {
                     "type": "string",
@@ -879,7 +1088,7 @@
                   "payerName": {
                     "type": "string",
                     "maxLength": 180,
-                    "description": "`BANK`: name of the account holder who sent the transfer."
+                    "description": "`BANK`: name of the account holder who sent the transfer. `GIMAC`: name of the payer (optional, helps KryptaPay match the payment)."
                   },
                   "network": {
                     "type": "string",
@@ -894,6 +1103,18 @@
                     "type": "string",
                     "maxLength": 120,
                     "description": "`STABLECOIN`: transaction hash. Replaces `proof` for stablecoin deposits."
+                  },
+                  "payerCountry": {
+                    "type": "string",
+                    "enum": [
+                      "CM",
+                      "CG",
+                      "GA",
+                      "TD",
+                      "CF",
+                      "GQ"
+                    ],
+                    "description": "`GIMAC` (required): CEMAC country of the paying account. It sets the entry fee, see [Get the GIMAC payment details](/api-reference/deposits/gimac)."
                   },
                   "proof": {
                     "type": "object",
@@ -919,7 +1140,7 @@
                       "base64"
                     ],
                     "additionalProperties": false,
-                    "description": "Proof of the transfer (bank receipt, statement extract…), base64-encoded. Required for `BANK`. PDF, JPEG, PNG or WebP; the whole request must stay under 15 MB."
+                    "description": "Proof of the transfer (bank receipt, statement extract…), base64-encoded. Required for `BANK`, not needed for `GIMAC`. PDF, JPEG, PNG or WebP; the whole request must stay under 15 MB."
                   }
                 },
                 "required": [
@@ -969,7 +1190,8 @@
                           "type": "string"
                         },
                         "ticketRef": {
-                          "type": "string"
+                          "type": "string",
+                          "description": "Reference to quote to support. For `GIMAC`, the payer puts it in the payment description."
                         },
                         "channel": {
                           "type": "string",
@@ -1094,6 +1316,43 @@
                             "null"
                           ]
                         },
+                        "expiresAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "description": "`GIMAC`: indicative payment deadline (30 minutes). A late payment can still be approved. `null` otherwise."
+                        },
+                        "payerCountry": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "description": "`GIMAC`: CEMAC country of the paying account. `null` otherwise."
+                        },
+                        "feeBps": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "description": "`GIMAC`: entry fee rate in basis points (200 = 2 %), fixed at declaration. `null` otherwise."
+                        },
+                        "feeAmount": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "`GIMAC`, once `APPROVED`: fee deducted from `confirmedAmount`. `null` otherwise."
+                        },
+                        "creditedAmount": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "`GIMAC`, once `APPROVED`: net amount credited to your wallet. `null` otherwise."
+                        },
                         "createdAt": {
                           "type": "string"
                         }
@@ -1114,6 +1373,11 @@
                         "confirmedAmount",
                         "decisionNote",
                         "reviewedAt",
+                        "expiresAt",
+                        "payerCountry",
+                        "feeBps",
+                        "feeAmount",
+                        "creditedAmount",
                         "createdAt"
                       ],
                       "additionalProperties": false
@@ -1143,6 +1407,11 @@
                     "confirmedAmount": null,
                     "decisionNote": null,
                     "reviewedAt": null,
+                    "expiresAt": null,
+                    "payerCountry": null,
+                    "feeBps": null,
+                    "feeAmount": null,
+                    "creditedAmount": null,
                     "createdAt": "2026-11-19T09:30:00.000Z"
                   }
                 }
@@ -1223,7 +1492,8 @@
                                 "type": "string"
                               },
                               "ticketRef": {
-                                "type": "string"
+                                "type": "string",
+                                "description": "Reference to quote to support. For `GIMAC`, the payer puts it in the payment description."
                               },
                               "channel": {
                                 "type": "string",
@@ -1348,6 +1618,43 @@
                                   "null"
                                 ]
                               },
+                              "expiresAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "`GIMAC`: indicative payment deadline (30 minutes). A late payment can still be approved. `null` otherwise."
+                              },
+                              "payerCountry": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "`GIMAC`: CEMAC country of the paying account. `null` otherwise."
+                              },
+                              "feeBps": {
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ],
+                                "description": "`GIMAC`: entry fee rate in basis points (200 = 2 %), fixed at declaration. `null` otherwise."
+                              },
+                              "feeAmount": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d+(\\.\\d{1,8})?$",
+                                "description": "`GIMAC`, once `APPROVED`: fee deducted from `confirmedAmount`. `null` otherwise."
+                              },
+                              "creditedAmount": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d+(\\.\\d{1,8})?$",
+                                "description": "`GIMAC`, once `APPROVED`: net amount credited to your wallet. `null` otherwise."
+                              },
                               "createdAt": {
                                 "type": "string"
                               }
@@ -1368,6 +1675,11 @@
                               "confirmedAmount",
                               "decisionNote",
                               "reviewedAt",
+                              "expiresAt",
+                              "payerCountry",
+                              "feeBps",
+                              "feeAmount",
+                              "creditedAmount",
                               "createdAt"
                             ],
                             "additionalProperties": false
@@ -1413,7 +1725,35 @@
                         "confirmedAmount": "1500",
                         "decisionNote": null,
                         "reviewedAt": "2026-11-19T11:02:00.000Z",
+                        "expiresAt": null,
+                        "payerCountry": null,
+                        "feeBps": null,
+                        "feeAmount": null,
+                        "creditedAmount": null,
                         "createdAt": "2026-11-19T10:41:00.000Z"
+                      },
+                      {
+                        "id": "cmdepg7h3k0000s60fz9y8x7w6",
+                        "reference": "dep_Gm4Qx8Lw2Rt6Yp0Zs3",
+                        "ticketRef": "DEP-2026-11-G4Q8LW",
+                        "channel": "GIMAC",
+                        "currency": "XAF",
+                        "declaredAmount": "50000",
+                        "status": "APPROVED",
+                        "bankName": null,
+                        "payerName": "Paul Mbarga",
+                        "network": null,
+                        "txHash": null,
+                        "hasProof": false,
+                        "confirmedAmount": "50000",
+                        "decisionNote": null,
+                        "reviewedAt": "2026-11-19T09:58:00.000Z",
+                        "expiresAt": "2026-11-19T10:00:00.000Z",
+                        "payerCountry": "CM",
+                        "feeBps": 200,
+                        "feeAmount": "1000",
+                        "creditedAmount": "49000",
+                        "createdAt": "2026-11-19T09:31:00.000Z"
                       },
                       {
                         "id": "cmdep4k2x0000s60fq7w8e9r1",
@@ -1431,6 +1771,11 @@
                         "confirmedAmount": null,
                         "decisionNote": null,
                         "reviewedAt": null,
+                        "expiresAt": null,
+                        "payerCountry": null,
+                        "feeBps": null,
+                        "feeAmount": null,
+                        "creditedAmount": null,
                         "createdAt": "2026-11-19T09:30:00.000Z"
                       }
                     ],
@@ -1456,7 +1801,7 @@
       "get": {
         "operationId": "getDeposit",
         "summary": "Get a deposit",
-        "description": "One deposit, by `id`, `reference` (`dep_…`) or `ticketRef` (`DEP-…`). Poll it to know when KryptaPay has reviewed it.",
+        "description": "One deposit, by `id`, `reference` (`dep_…`) or `ticketRef` (`DEP-…`). Use it to confirm a `DEPOSIT_APPROVED` / `DEPOSIT_REJECTED` webhook, or poll it until KryptaPay has reviewed the deposit.",
         "tags": [
           "Deposits"
         ],
@@ -1495,7 +1840,8 @@
                           "type": "string"
                         },
                         "ticketRef": {
-                          "type": "string"
+                          "type": "string",
+                          "description": "Reference to quote to support. For `GIMAC`, the payer puts it in the payment description."
                         },
                         "channel": {
                           "type": "string",
@@ -1620,6 +1966,43 @@
                             "null"
                           ]
                         },
+                        "expiresAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "description": "`GIMAC`: indicative payment deadline (30 minutes). A late payment can still be approved. `null` otherwise."
+                        },
+                        "payerCountry": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "description": "`GIMAC`: CEMAC country of the paying account. `null` otherwise."
+                        },
+                        "feeBps": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "description": "`GIMAC`: entry fee rate in basis points (200 = 2 %), fixed at declaration. `null` otherwise."
+                        },
+                        "feeAmount": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "`GIMAC`, once `APPROVED`: fee deducted from `confirmedAmount`. `null` otherwise."
+                        },
+                        "creditedAmount": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "`GIMAC`, once `APPROVED`: net amount credited to your wallet. `null` otherwise."
+                        },
                         "createdAt": {
                           "type": "string"
                         }
@@ -1640,6 +2023,11 @@
                         "confirmedAmount",
                         "decisionNote",
                         "reviewedAt",
+                        "expiresAt",
+                        "payerCountry",
+                        "feeBps",
+                        "feeAmount",
+                        "creditedAmount",
                         "createdAt"
                       ],
                       "additionalProperties": false
@@ -1669,6 +2057,11 @@
                     "confirmedAmount": "2500000",
                     "decisionNote": null,
                     "reviewedAt": "2026-11-19T14:12:00.000Z",
+                    "expiresAt": null,
+                    "payerCountry": null,
+                    "feeBps": null,
+                    "feeAmount": null,
+                    "creditedAmount": null,
                     "createdAt": "2026-11-19T09:30:00.000Z"
                   }
                 }
@@ -1781,7 +2174,8 @@
                           "type": "string"
                         },
                         "ticketRef": {
-                          "type": "string"
+                          "type": "string",
+                          "description": "Reference to quote to support. For `GIMAC`, the payer puts it in the payment description."
                         },
                         "channel": {
                           "type": "string",
@@ -1906,6 +2300,43 @@
                             "null"
                           ]
                         },
+                        "expiresAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "description": "`GIMAC`: indicative payment deadline (30 minutes). A late payment can still be approved. `null` otherwise."
+                        },
+                        "payerCountry": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "description": "`GIMAC`: CEMAC country of the paying account. `null` otherwise."
+                        },
+                        "feeBps": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "description": "`GIMAC`: entry fee rate in basis points (200 = 2 %), fixed at declaration. `null` otherwise."
+                        },
+                        "feeAmount": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "`GIMAC`, once `APPROVED`: fee deducted from `confirmedAmount`. `null` otherwise."
+                        },
+                        "creditedAmount": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "`GIMAC`, once `APPROVED`: net amount credited to your wallet. `null` otherwise."
+                        },
                         "createdAt": {
                           "type": "string"
                         }
@@ -1926,6 +2357,11 @@
                         "confirmedAmount",
                         "decisionNote",
                         "reviewedAt",
+                        "expiresAt",
+                        "payerCountry",
+                        "feeBps",
+                        "feeAmount",
+                        "creditedAmount",
                         "createdAt"
                       ],
                       "additionalProperties": false
@@ -1955,6 +2391,11 @@
                     "confirmedAmount": null,
                     "decisionNote": null,
                     "reviewedAt": null,
+                    "expiresAt": null,
+                    "payerCountry": null,
+                    "feeBps": null,
+                    "feeAmount": null,
+                    "creditedAmount": null,
                     "createdAt": "2026-11-19T09:30:00.000Z"
                   }
                 }
