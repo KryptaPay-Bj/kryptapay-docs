@@ -31,8 +31,12 @@
       "description": "Collect money from your customers' Mobile Money wallets."
     },
     {
+      "name": "Deposits",
+      "description": "Fund your wallets by bank transfer or stablecoin. KryptaPay reviews each deposit before crediting it."
+    },
+    {
       "name": "Payouts",
-      "description": "Send money to Mobile Money wallets, bank accounts and crypto addresses."
+      "description": "Send money to Mobile Money wallets, bank accounts and stablecoin addresses."
     },
     {
       "name": "Beneficiaries",
@@ -87,8 +91,8 @@
                     "$ref": "#/components/schemas/Currency"
                   },
                   "network": {
-                    "description": "Mobile Money network to charge. Must match `currency`.",
-                    "$ref": "#/components/schemas/Network"
+                    "description": "Mobile Money network to charge. Must match `currency`. Bank and stablecoin networks are refused (`422`): declare those deposits with [Declare a deposit](/api-reference/deposits/create).",
+                    "$ref": "#/components/schemas/MobileMoneyNetwork"
                   },
                   "customer": {
                     "type": "object",
@@ -555,11 +559,1434 @@
         }
       }
     },
+    "/v1/collect-accounts": {
+      "get": {
+        "operationId": "listDepositBankAccounts",
+        "summary": "List KryptaPay bank accounts",
+        "description": "KryptaPay bank accounts you can wire money to, with the details to put on the transfer. Then [declare the deposit](/api-reference/deposits/create) with channel `BANK`. An empty list means no account is open in that country yet: contact support.",
+        "tags": [
+          "Deposits"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 2
+            },
+            "in": "query",
+            "name": "country",
+            "required": false,
+            "description": "ISO 3166-1 alpha-2 country code of the account (e.g. `BJ`, `CI`, `NG`). Omit to list every country."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "country": {
+                                "type": "string"
+                              },
+                              "currency": {
+                                "$ref": "#/components/schemas/Currency"
+                              },
+                              "bankName": {
+                                "type": "string"
+                              },
+                              "beneficiaryName": {
+                                "type": "string"
+                              },
+                              "iban": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "bic": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "accountNumber": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "routingNumber": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "swift": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "notes": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Instructions to follow for the transfer (e.g. reference to put in the wire)."
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "country",
+                              "currency",
+                              "bankName",
+                              "beneficiaryName",
+                              "iban",
+                              "bic",
+                              "accountNumber",
+                              "routingNumber",
+                              "swift",
+                              "notes"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "items"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                },
+                "example": {
+                  "ok": true,
+                  "data": {
+                    "items": [
+                      {
+                        "id": "cmcol8x2k0000s60f1a2b3c4d",
+                        "country": "BJ",
+                        "currency": "XOF",
+                        "bankName": "Example Bank",
+                        "beneficiaryName": "KryptaPay",
+                        "iban": "BJ00EXAMPLE0000000000000000",
+                        "bic": "EXAMPLEXXX",
+                        "accountNumber": null,
+                        "routingNumber": null,
+                        "swift": "EXAMPLEXXX",
+                        "notes": "Put your KryptaPay ticket reference in the transfer label."
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/v1/deposits/stablecoin-address": {
+      "get": {
+        "operationId": "getStablecoinDepositAddress",
+        "summary": "Get the stablecoin deposit address",
+        "description": "KryptaPay address to send a stablecoin deposit to, for one asset on one network. Send **only** that asset on that network, then [declare the deposit](/api-reference/deposits/create) with channel `STABLECOIN` and the transaction hash. `404 no_address` when no address is open for that pair.",
+        "tags": [
+          "Deposits"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "USDC",
+                "USDT"
+              ]
+            },
+            "in": "query",
+            "name": "asset",
+            "required": true,
+            "description": "Stablecoin to send."
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ETH",
+                "POLYGON",
+                "TRON"
+              ]
+            },
+            "in": "query",
+            "name": "network",
+            "required": true,
+            "description": "Network to send it on."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "asset": {
+                          "type": "string",
+                          "enum": [
+                            "USDC",
+                            "USDT"
+                          ]
+                        },
+                        "network": {
+                          "type": "string",
+                          "enum": [
+                            "ETH",
+                            "POLYGON",
+                            "TRON"
+                          ]
+                        },
+                        "address": {
+                          "type": "string"
+                        },
+                        "label": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "asset",
+                        "network",
+                        "address",
+                        "label"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                },
+                "example": {
+                  "ok": true,
+                  "data": {
+                    "asset": "USDT",
+                    "network": "TRON",
+                    "address": "TEXAMPLEADDRESSxxxxxxxxxxxxxxxxxx",
+                    "label": "KryptaPay USDT TRON"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/v1/deposits": {
+      "post": {
+        "operationId": "createDeposit",
+        "summary": "Declare a deposit",
+        "description": "Declares money you sent to KryptaPay **outside** the API, so it can be credited to your wallet in `currency`:\n\n- **Bank transfer** (`BANK`): wire to an account from [List KryptaPay bank accounts](/api-reference/deposits/bank-accounts), then declare it with the transfer receipt in `proof`.\n- **Stablecoin** (`STABLECOIN`): send USDC or USDT to the address from [Get the stablecoin deposit address](/api-reference/deposits/stablecoin-address), then declare it with `network` and `txHash`.\n\nEvery deposit is **reviewed by KryptaPay** before your wallet is credited: it starts `PENDING`, then becomes `APPROVED` (wallet credited with `confirmedAmount`) or `REJECTED`. No webhook is sent: poll [Get a deposit](/api-reference/deposits/get).\n\nMobile Money collections are not declared here: use [Create a payin](/api-reference/payins/create).\n\n**API key scope:** `payins:write`",
+        "tags": [
+          "Deposits"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "channel": {
+                    "type": "string",
+                    "enum": [
+                      "BANK",
+                      "STABLECOIN"
+                    ],
+                    "description": "`BANK` for a bank transfer, `STABLECOIN` for a USDC / USDT transfer."
+                  },
+                  "currency": {
+                    "description": "Wallet to credit. For `STABLECOIN`, the asset you sent (`USDC` or `USDT`).",
+                    "$ref": "#/components/schemas/Currency"
+                  },
+                  "declaredAmount": {
+                    "type": "string",
+                    "pattern": "^\\d+(\\.\\d{1,8})?$",
+                    "description": "Amount you sent, as a decimal string. KryptaPay credits the amount actually received (`confirmedAmount`)."
+                  },
+                  "bankName": {
+                    "type": "string",
+                    "maxLength": 160,
+                    "description": "`BANK`: bank the transfer was sent from."
+                  },
+                  "payerName": {
+                    "type": "string",
+                    "maxLength": 180,
+                    "description": "`BANK`: name of the account holder who sent the transfer."
+                  },
+                  "network": {
+                    "type": "string",
+                    "enum": [
+                      "ETH",
+                      "POLYGON",
+                      "TRON"
+                    ],
+                    "description": "`STABLECOIN`: network the transfer was sent on."
+                  },
+                  "txHash": {
+                    "type": "string",
+                    "maxLength": 120,
+                    "description": "`STABLECOIN`: transaction hash. Replaces `proof` for stablecoin deposits."
+                  },
+                  "proof": {
+                    "type": "object",
+                    "properties": {
+                      "filename": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "mimeType": {
+                        "type": "string",
+                        "minLength": 3,
+                        "maxLength": 120
+                      },
+                      "base64": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "filename",
+                      "mimeType",
+                      "base64"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Proof of the transfer (bank receipt, statement extract…), base64-encoded. Required for `BANK`. PDF, JPEG, PNG or WebP; the whole request must stay under 15 MB."
+                  }
+                },
+                "required": [
+                  "channel",
+                  "currency",
+                  "declaredAmount"
+                ],
+                "additionalProperties": false
+              },
+              "example": {
+                "channel": "BANK",
+                "currency": "XOF",
+                "declaredAmount": "2500000",
+                "bankName": "Ecobank Bénin",
+                "payerName": "Awa Koné SARL",
+                "proof": {
+                  "filename": "wire-receipt.pdf",
+                  "mimeType": "application/pdf",
+                  "base64": "JVBERi0xLjcKJc..."
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "reference": {
+                          "type": "string"
+                        },
+                        "ticketRef": {
+                          "type": "string"
+                        },
+                        "channel": {
+                          "type": "string",
+                          "enum": [
+                            "BANK",
+                            "MOBILE_MONEY",
+                            "STABLECOIN",
+                            "GIMAC"
+                          ]
+                        },
+                        "currency": {
+                          "$ref": "#/components/schemas/Currency"
+                        },
+                        "declaredAmount": {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "PENDING",
+                            "APPROVED",
+                            "REJECTED",
+                            "INFO_REQUESTED"
+                          ]
+                        },
+                        "bankName": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "payerName": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "network": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "enum": [
+                            "MTN_BJ",
+                            "MTN_CI",
+                            "MTN_CM",
+                            "ORANGE_CI",
+                            "ORANGE_SN",
+                            "ORANGE_ML",
+                            "ORANGE_BF",
+                            "ORANGE_CM",
+                            "MOOV_BJ",
+                            "MOOV_TG",
+                            "MOOV_CI",
+                            "MOOV_BF",
+                            "WAVE_CI",
+                            "WAVE_SN",
+                            "FREE_SN",
+                            "TMONEY_TG",
+                            "MOBICASH_ML",
+                            "MOBICASH_BF",
+                            "DJAMO_CI",
+                            "MIXX_SN",
+                            "MTN_CG",
+                            "AIRTEL_CG",
+                            "ORANGE_CD",
+                            "AIRTEL_CD",
+                            "VODACOM_CD",
+                            "AFRICELL_CD",
+                            "AIRTEL_GA",
+                            "MOOV_GA",
+                            "AIRTEL_TD",
+                            "MOOV_TD",
+                            "MUNI_GQ",
+                            "ORANGE_CF",
+                            "MOMO_NG",
+                            "AIRTEL_NG",
+                            "OPAY_NG",
+                            "MTN_GH",
+                            "VODAFONE_GH",
+                            "AIRTELTIGO_GH",
+                            "BANK_XOF",
+                            "BANK_XAF",
+                            "BANK_NGN",
+                            "BANK_GHS",
+                            "BANK_CDF",
+                            "BANK_EUR",
+                            "BANK_USD",
+                            "ETH",
+                            "POLYGON",
+                            "TRON"
+                          ]
+                        },
+                        "txHash": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "hasProof": {
+                          "type": "boolean"
+                        },
+                        "confirmedAmount": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                        },
+                        "decisionNote": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "reviewedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "reference",
+                        "ticketRef",
+                        "channel",
+                        "currency",
+                        "declaredAmount",
+                        "status",
+                        "bankName",
+                        "payerName",
+                        "network",
+                        "txHash",
+                        "hasProof",
+                        "confirmedAmount",
+                        "decisionNote",
+                        "reviewedAt",
+                        "createdAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                },
+                "example": {
+                  "ok": true,
+                  "data": {
+                    "id": "cmdep4k2x0000s60fq7w8e9r1",
+                    "reference": "dep_7Hk2LmP9qRsT4uVwXy",
+                    "ticketRef": "DEP-2026-11-7K3F9A",
+                    "channel": "BANK",
+                    "currency": "XOF",
+                    "declaredAmount": "2500000",
+                    "status": "PENDING",
+                    "bankName": "Ecobank Bénin",
+                    "payerName": "Awa Koné SARL",
+                    "network": null,
+                    "txHash": null,
+                    "hasProof": true,
+                    "confirmedAmount": null,
+                    "decisionNote": null,
+                    "reviewedAt": null,
+                    "createdAt": "2026-11-19T09:30:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "get": {
+        "operationId": "listDeposits",
+        "summary": "List deposits",
+        "description": "Your declared deposits, most recent first. Pass `nextCursor` as `cursor` to get the next page.",
+        "tags": [
+          "Deposits"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "cursor",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "reference": {
+                                "type": "string"
+                              },
+                              "ticketRef": {
+                                "type": "string"
+                              },
+                              "channel": {
+                                "type": "string",
+                                "enum": [
+                                  "BANK",
+                                  "MOBILE_MONEY",
+                                  "STABLECOIN",
+                                  "GIMAC"
+                                ]
+                              },
+                              "currency": {
+                                "$ref": "#/components/schemas/Currency"
+                              },
+                              "declaredAmount": {
+                                "type": "string",
+                                "pattern": "^\\d+(\\.\\d{1,8})?$",
+                                "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "PENDING",
+                                  "APPROVED",
+                                  "REJECTED",
+                                  "INFO_REQUESTED"
+                                ]
+                              },
+                              "bankName": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "payerName": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "network": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "enum": [
+                                  "MTN_BJ",
+                                  "MTN_CI",
+                                  "MTN_CM",
+                                  "ORANGE_CI",
+                                  "ORANGE_SN",
+                                  "ORANGE_ML",
+                                  "ORANGE_BF",
+                                  "ORANGE_CM",
+                                  "MOOV_BJ",
+                                  "MOOV_TG",
+                                  "MOOV_CI",
+                                  "MOOV_BF",
+                                  "WAVE_CI",
+                                  "WAVE_SN",
+                                  "FREE_SN",
+                                  "TMONEY_TG",
+                                  "MOBICASH_ML",
+                                  "MOBICASH_BF",
+                                  "DJAMO_CI",
+                                  "MIXX_SN",
+                                  "MTN_CG",
+                                  "AIRTEL_CG",
+                                  "ORANGE_CD",
+                                  "AIRTEL_CD",
+                                  "VODACOM_CD",
+                                  "AFRICELL_CD",
+                                  "AIRTEL_GA",
+                                  "MOOV_GA",
+                                  "AIRTEL_TD",
+                                  "MOOV_TD",
+                                  "MUNI_GQ",
+                                  "ORANGE_CF",
+                                  "MOMO_NG",
+                                  "AIRTEL_NG",
+                                  "OPAY_NG",
+                                  "MTN_GH",
+                                  "VODAFONE_GH",
+                                  "AIRTELTIGO_GH",
+                                  "BANK_XOF",
+                                  "BANK_XAF",
+                                  "BANK_NGN",
+                                  "BANK_GHS",
+                                  "BANK_CDF",
+                                  "BANK_EUR",
+                                  "BANK_USD",
+                                  "ETH",
+                                  "POLYGON",
+                                  "TRON"
+                                ]
+                              },
+                              "txHash": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "hasProof": {
+                                "type": "boolean"
+                              },
+                              "confirmedAmount": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d+(\\.\\d{1,8})?$",
+                                "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                              },
+                              "decisionNote": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "reviewedAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "createdAt": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "reference",
+                              "ticketRef",
+                              "channel",
+                              "currency",
+                              "declaredAmount",
+                              "status",
+                              "bankName",
+                              "payerName",
+                              "network",
+                              "txHash",
+                              "hasProof",
+                              "confirmedAmount",
+                              "decisionNote",
+                              "reviewedAt",
+                              "createdAt"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "nextCursor": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "items",
+                        "nextCursor"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                },
+                "example": {
+                  "ok": true,
+                  "data": {
+                    "items": [
+                      {
+                        "id": "cmdep9t1z0000s60fa1b2c3d4",
+                        "reference": "dep_Qw3Er5Ty7Ui9Op1As2",
+                        "ticketRef": "DEP-2026-11-9QW3ER",
+                        "channel": "STABLECOIN",
+                        "currency": "USDT",
+                        "declaredAmount": "1500",
+                        "status": "APPROVED",
+                        "bankName": null,
+                        "payerName": null,
+                        "network": "TRON",
+                        "txHash": "9f2c1e7a4b3d8f6e5a2c1b0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f",
+                        "hasProof": false,
+                        "confirmedAmount": "1500",
+                        "decisionNote": null,
+                        "reviewedAt": "2026-11-19T11:02:00.000Z",
+                        "createdAt": "2026-11-19T10:41:00.000Z"
+                      },
+                      {
+                        "id": "cmdep4k2x0000s60fq7w8e9r1",
+                        "reference": "dep_7Hk2LmP9qRsT4uVwXy",
+                        "ticketRef": "DEP-2026-11-7K3F9A",
+                        "channel": "BANK",
+                        "currency": "XOF",
+                        "declaredAmount": "2500000",
+                        "status": "PENDING",
+                        "bankName": "Ecobank Bénin",
+                        "payerName": "Awa Koné SARL",
+                        "network": null,
+                        "txHash": null,
+                        "hasProof": true,
+                        "confirmedAmount": null,
+                        "decisionNote": null,
+                        "reviewedAt": null,
+                        "createdAt": "2026-11-19T09:30:00.000Z"
+                      }
+                    ],
+                    "nextCursor": null
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/v1/deposits/{id}": {
+      "get": {
+        "operationId": "getDeposit",
+        "summary": "Get a deposit",
+        "description": "One deposit, by `id`, `reference` (`dep_…`) or `ticketRef` (`DEP-…`). Poll it to know when KryptaPay has reviewed it.",
+        "tags": [
+          "Deposits"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Deposit id, `reference` or `ticketRef`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "reference": {
+                          "type": "string"
+                        },
+                        "ticketRef": {
+                          "type": "string"
+                        },
+                        "channel": {
+                          "type": "string",
+                          "enum": [
+                            "BANK",
+                            "MOBILE_MONEY",
+                            "STABLECOIN",
+                            "GIMAC"
+                          ]
+                        },
+                        "currency": {
+                          "$ref": "#/components/schemas/Currency"
+                        },
+                        "declaredAmount": {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "PENDING",
+                            "APPROVED",
+                            "REJECTED",
+                            "INFO_REQUESTED"
+                          ]
+                        },
+                        "bankName": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "payerName": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "network": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "enum": [
+                            "MTN_BJ",
+                            "MTN_CI",
+                            "MTN_CM",
+                            "ORANGE_CI",
+                            "ORANGE_SN",
+                            "ORANGE_ML",
+                            "ORANGE_BF",
+                            "ORANGE_CM",
+                            "MOOV_BJ",
+                            "MOOV_TG",
+                            "MOOV_CI",
+                            "MOOV_BF",
+                            "WAVE_CI",
+                            "WAVE_SN",
+                            "FREE_SN",
+                            "TMONEY_TG",
+                            "MOBICASH_ML",
+                            "MOBICASH_BF",
+                            "DJAMO_CI",
+                            "MIXX_SN",
+                            "MTN_CG",
+                            "AIRTEL_CG",
+                            "ORANGE_CD",
+                            "AIRTEL_CD",
+                            "VODACOM_CD",
+                            "AFRICELL_CD",
+                            "AIRTEL_GA",
+                            "MOOV_GA",
+                            "AIRTEL_TD",
+                            "MOOV_TD",
+                            "MUNI_GQ",
+                            "ORANGE_CF",
+                            "MOMO_NG",
+                            "AIRTEL_NG",
+                            "OPAY_NG",
+                            "MTN_GH",
+                            "VODAFONE_GH",
+                            "AIRTELTIGO_GH",
+                            "BANK_XOF",
+                            "BANK_XAF",
+                            "BANK_NGN",
+                            "BANK_GHS",
+                            "BANK_CDF",
+                            "BANK_EUR",
+                            "BANK_USD",
+                            "ETH",
+                            "POLYGON",
+                            "TRON"
+                          ]
+                        },
+                        "txHash": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "hasProof": {
+                          "type": "boolean"
+                        },
+                        "confirmedAmount": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                        },
+                        "decisionNote": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "reviewedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "reference",
+                        "ticketRef",
+                        "channel",
+                        "currency",
+                        "declaredAmount",
+                        "status",
+                        "bankName",
+                        "payerName",
+                        "network",
+                        "txHash",
+                        "hasProof",
+                        "confirmedAmount",
+                        "decisionNote",
+                        "reviewedAt",
+                        "createdAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                },
+                "example": {
+                  "ok": true,
+                  "data": {
+                    "id": "cmdep4k2x0000s60fq7w8e9r1",
+                    "reference": "dep_7Hk2LmP9qRsT4uVwXy",
+                    "ticketRef": "DEP-2026-11-7K3F9A",
+                    "channel": "BANK",
+                    "currency": "XOF",
+                    "declaredAmount": "2500000",
+                    "status": "APPROVED",
+                    "bankName": "Ecobank Bénin",
+                    "payerName": "Awa Koné SARL",
+                    "network": null,
+                    "txHash": null,
+                    "hasProof": true,
+                    "confirmedAmount": "2500000",
+                    "decisionNote": null,
+                    "reviewedAt": "2026-11-19T14:12:00.000Z",
+                    "createdAt": "2026-11-19T09:30:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/v1/deposits/{id}/proof": {
+      "post": {
+        "operationId": "attachDepositProof",
+        "summary": "Attach a proof to a deposit",
+        "description": "Adds or replaces the proof of a deposit that is still `PENDING`. `409 bad_status` once KryptaPay has reviewed it.\n\n**API key scope:** `payins:write`",
+        "tags": [
+          "Deposits"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Deposit id, `reference` or `ticketRef`."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "proof": {
+                    "type": "object",
+                    "properties": {
+                      "filename": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "mimeType": {
+                        "type": "string",
+                        "minLength": 3,
+                        "maxLength": 120
+                      },
+                      "base64": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "filename",
+                      "mimeType",
+                      "base64"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "proof"
+                ],
+                "additionalProperties": false
+              },
+              "example": {
+                "proof": {
+                  "filename": "statement-extract.png",
+                  "mimeType": "image/png",
+                  "base64": "iVBORw0KGgo..."
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "reference": {
+                          "type": "string"
+                        },
+                        "ticketRef": {
+                          "type": "string"
+                        },
+                        "channel": {
+                          "type": "string",
+                          "enum": [
+                            "BANK",
+                            "MOBILE_MONEY",
+                            "STABLECOIN",
+                            "GIMAC"
+                          ]
+                        },
+                        "currency": {
+                          "$ref": "#/components/schemas/Currency"
+                        },
+                        "declaredAmount": {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "PENDING",
+                            "APPROVED",
+                            "REJECTED",
+                            "INFO_REQUESTED"
+                          ]
+                        },
+                        "bankName": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "payerName": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "network": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "enum": [
+                            "MTN_BJ",
+                            "MTN_CI",
+                            "MTN_CM",
+                            "ORANGE_CI",
+                            "ORANGE_SN",
+                            "ORANGE_ML",
+                            "ORANGE_BF",
+                            "ORANGE_CM",
+                            "MOOV_BJ",
+                            "MOOV_TG",
+                            "MOOV_CI",
+                            "MOOV_BF",
+                            "WAVE_CI",
+                            "WAVE_SN",
+                            "FREE_SN",
+                            "TMONEY_TG",
+                            "MOBICASH_ML",
+                            "MOBICASH_BF",
+                            "DJAMO_CI",
+                            "MIXX_SN",
+                            "MTN_CG",
+                            "AIRTEL_CG",
+                            "ORANGE_CD",
+                            "AIRTEL_CD",
+                            "VODACOM_CD",
+                            "AFRICELL_CD",
+                            "AIRTEL_GA",
+                            "MOOV_GA",
+                            "AIRTEL_TD",
+                            "MOOV_TD",
+                            "MUNI_GQ",
+                            "ORANGE_CF",
+                            "MOMO_NG",
+                            "AIRTEL_NG",
+                            "OPAY_NG",
+                            "MTN_GH",
+                            "VODAFONE_GH",
+                            "AIRTELTIGO_GH",
+                            "BANK_XOF",
+                            "BANK_XAF",
+                            "BANK_NGN",
+                            "BANK_GHS",
+                            "BANK_CDF",
+                            "BANK_EUR",
+                            "BANK_USD",
+                            "ETH",
+                            "POLYGON",
+                            "TRON"
+                          ]
+                        },
+                        "txHash": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "hasProof": {
+                          "type": "boolean"
+                        },
+                        "confirmedAmount": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^\\d+(\\.\\d{1,8})?$",
+                          "description": "Decimal amount with up to 8 fractional digits, e.g. \"1500\" or \"1500.75\""
+                        },
+                        "decisionNote": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "reviewedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "reference",
+                        "ticketRef",
+                        "channel",
+                        "currency",
+                        "declaredAmount",
+                        "status",
+                        "bankName",
+                        "payerName",
+                        "network",
+                        "txHash",
+                        "hasProof",
+                        "confirmedAmount",
+                        "decisionNote",
+                        "reviewedAt",
+                        "createdAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                },
+                "example": {
+                  "ok": true,
+                  "data": {
+                    "id": "cmdep4k2x0000s60fq7w8e9r1",
+                    "reference": "dep_7Hk2LmP9qRsT4uVwXy",
+                    "ticketRef": "DEP-2026-11-7K3F9A",
+                    "channel": "BANK",
+                    "currency": "XOF",
+                    "declaredAmount": "2500000",
+                    "status": "PENDING",
+                    "bankName": "Ecobank Bénin",
+                    "payerName": "Awa Koné SARL",
+                    "network": null,
+                    "txHash": null,
+                    "hasProof": true,
+                    "confirmedAmount": null,
+                    "decisionNote": null,
+                    "reviewedAt": null,
+                    "createdAt": "2026-11-19T09:30:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
     "/v1/payouts": {
       "post": {
         "operationId": "createPayout",
         "summary": "Create a payout",
-        "description": "Sends money from your wallet in `currency` to a recipient. The amount plus fee is reserved immediately.\n\nAlways send an `Idempotency-Key`: retrying with the same key returns the original payout instead of paying twice.\nListen for the `PAYOUT_COMPLETED` / `PAYOUT_FAILED` webhooks for the final result.\n\n**API key scope:** `payouts:write`",
+        "description": "Sends money from your wallet in `currency` to a recipient. The amount plus fee is reserved immediately.\n\n- **Mobile Money** payouts are usually executed straight away.\n- **Bank** (`BANK_*`) and **stablecoin** (`ETH`, `POLYGON`, `TRON`) payouts are always reviewed by KryptaPay before being sent: they stay `PENDING` until then.\n\nAlways send an `Idempotency-Key`: retrying with the same key returns the original payout instead of paying twice.\nListen for the `PAYOUT_COMPLETED` / `PAYOUT_FAILED` webhooks for the final result.\n\n**API key scope:** `payouts:write`",
         "tags": [
           "Payouts"
         ],
@@ -694,7 +2121,7 @@
                       }
                     },
                     "additionalProperties": false,
-                    "description": "Which fields are required depends on `network`: mobile money networks require msisdn; BANK_NGN requires accountNumber and bankCode; crypto networks (ETH/POLYGON/TRON) require address; BANK_EUR and BANK_USD require the iban (or accountNumber) saved on the beneficiary given in `counterpartyId`. The other bank rails (BANK_XOF, BANK_XAF, BANK_GHS, BANK_CDF) are settled manually by KryptaPay today, so at least one recipient identifier is required but no specific field is enforced yet."
+                    "description": "Which fields are required depends on `network`: mobile money networks require msisdn; BANK_NGN requires accountNumber and bankCode; stablecoin networks (ETH/POLYGON/TRON) require address; BANK_EUR and BANK_USD require the iban (or accountNumber) saved on the beneficiary given in `counterpartyId`. The other bank rails (BANK_XOF, BANK_XAF, BANK_GHS, BANK_CDF) are settled manually by KryptaPay today, so at least one recipient identifier is required but no specific field is enforced yet."
                   },
                   "description": {
                     "type": "string",
@@ -2242,7 +3669,7 @@
                         "type": "string",
                         "maxLength": 80
                       },
-                      "cryptoAsset": {
+                      "stablecoinAsset": {
                         "type": "string",
                         "maxLength": 20
                       },
@@ -2302,8 +3729,9 @@
                           "enum": [
                             "BANK",
                             "MOMO",
-                            "CRYPTO"
-                          ]
+                            "STABLECOIN"
+                          ],
+                          "description": "`BANK`, `MOMO` (mobile money) or `STABLECOIN`."
                         },
                         "currency": {
                           "$ref": "#/components/schemas/Currency"
@@ -2502,21 +3930,24 @@
                             "ETH",
                             "POLYGON",
                             "TRON"
-                          ]
+                          ],
+                          "description": "`STABLECOIN`: network of the address (`ETH`, `POLYGON` or `TRON`)."
                         },
                         "walletAddress": {
                           "type": [
                             "string",
                             "null"
                           ],
-                          "maxLength": 120
+                          "maxLength": 120,
+                          "description": "`STABLECOIN`: recipient address on that network."
                         },
-                        "cryptoAsset": {
+                        "stablecoinAsset": {
                           "type": [
                             "string",
                             "null"
                           ],
-                          "maxLength": 20
+                          "maxLength": 20,
+                          "description": "`STABLECOIN`: `USDC` or `USDT`."
                         }
                       },
                       "required": [
@@ -2858,7 +4289,7 @@
                                 "enum": [
                                   "BANK",
                                   "MOMO",
-                                  "CRYPTO"
+                                  "STABLECOIN"
                                 ]
                               },
                               "currency": {
@@ -3054,7 +4485,7 @@
                                   "null"
                                 ]
                               },
-                              "cryptoAsset": {
+                              "stablecoinAsset": {
                                 "type": [
                                   "string",
                                   "null"
@@ -3083,7 +4514,7 @@
                               "momoHolderId",
                               "walletChain",
                               "walletAddress",
-                              "cryptoAsset",
+                              "stablecoinAsset",
                               "createdAt"
                             ],
                             "additionalProperties": false
@@ -3518,7 +4949,7 @@
                                       "enum": [
                                         "BANK",
                                         "MOMO",
-                                        "CRYPTO"
+                                        "STABLECOIN"
                                       ]
                                     },
                                     "currency": {
@@ -3714,7 +5145,7 @@
                                         "null"
                                       ]
                                     },
-                                    "cryptoAsset": {
+                                    "stablecoinAsset": {
                                       "type": [
                                         "string",
                                         "null"
@@ -3743,7 +5174,7 @@
                                     "momoHolderId",
                                     "walletChain",
                                     "walletAddress",
-                                    "cryptoAsset",
+                                    "stablecoinAsset",
                                     "createdAt"
                                   ],
                                   "additionalProperties": false
@@ -4181,7 +5612,7 @@
                                 "enum": [
                                   "BANK",
                                   "MOMO",
-                                  "CRYPTO"
+                                  "STABLECOIN"
                                 ]
                               },
                               "currency": {
@@ -4377,7 +5808,7 @@
                                   "null"
                                 ]
                               },
-                              "cryptoAsset": {
+                              "stablecoinAsset": {
                                 "type": [
                                   "string",
                                   "null"
@@ -4406,7 +5837,7 @@
                               "momoHolderId",
                               "walletChain",
                               "walletAddress",
-                              "cryptoAsset",
+                              "stablecoinAsset",
                               "createdAt"
                             ],
                             "additionalProperties": false
@@ -4738,7 +6169,7 @@
                         "type": "string",
                         "maxLength": 80
                       },
-                      "cryptoAsset": {
+                      "stablecoinAsset": {
                         "type": "string",
                         "maxLength": 20
                       },
@@ -4762,8 +6193,9 @@
                           "enum": [
                             "BANK",
                             "MOMO",
-                            "CRYPTO"
-                          ]
+                            "STABLECOIN"
+                          ],
+                          "description": "`BANK`, `MOMO` (mobile money) or `STABLECOIN`."
                         },
                         "currency": {
                           "$ref": "#/components/schemas/Currency"
@@ -4962,21 +6394,24 @@
                             "ETH",
                             "POLYGON",
                             "TRON"
-                          ]
+                          ],
+                          "description": "`STABLECOIN`: network of the address (`ETH`, `POLYGON` or `TRON`)."
                         },
                         "walletAddress": {
                           "type": [
                             "string",
                             "null"
                           ],
-                          "maxLength": 120
+                          "maxLength": 120,
+                          "description": "`STABLECOIN`: recipient address on that network."
                         },
-                        "cryptoAsset": {
+                        "stablecoinAsset": {
                           "type": [
                             "string",
                             "null"
                           ],
-                          "maxLength": 20
+                          "maxLength": 20,
+                          "description": "`STABLECOIN`: `USDC` or `USDT`."
                         }
                       },
                       "required": [
@@ -5337,7 +6772,7 @@
                                 "enum": [
                                   "BANK",
                                   "MOMO",
-                                  "CRYPTO"
+                                  "STABLECOIN"
                                 ]
                               },
                               "currency": {
@@ -5533,7 +6968,7 @@
                                   "null"
                                 ]
                               },
-                              "cryptoAsset": {
+                              "stablecoinAsset": {
                                 "type": [
                                   "string",
                                   "null"
@@ -5562,7 +6997,7 @@
                               "momoHolderId",
                               "walletChain",
                               "walletAddress",
-                              "cryptoAsset",
+                              "stablecoinAsset",
                               "createdAt"
                             ],
                             "additionalProperties": false
@@ -5987,7 +7422,7 @@
                                 "enum": [
                                   "BANK",
                                   "MOMO",
-                                  "CRYPTO"
+                                  "STABLECOIN"
                                 ]
                               },
                               "currency": {
@@ -6183,7 +7618,7 @@
                                   "null"
                                 ]
                               },
-                              "cryptoAsset": {
+                              "stablecoinAsset": {
                                 "type": [
                                   "string",
                                   "null"
@@ -6212,7 +7647,7 @@
                               "momoHolderId",
                               "walletChain",
                               "walletAddress",
-                              "cryptoAsset",
+                              "stablecoinAsset",
                               "createdAt"
                             ],
                             "additionalProperties": false
@@ -7561,13 +8996,13 @@
               "enum": [
                 "momo",
                 "bank",
-                "crypto"
+                "stablecoin"
               ]
             },
             "in": "query",
             "name": "rail",
             "required": false,
-            "description": "Filter by rail: mobile money, bank or crypto."
+            "description": "Filter by rail: `momo` (mobile money), `bank` or `stablecoin`."
           }
         ],
         "responses": {
@@ -8277,8 +9712,8 @@
                     "$ref": "#/components/schemas/Currency"
                   },
                   "network": {
-                    "description": "Mobile Money network to charge. Must match `currency`.",
-                    "$ref": "#/components/schemas/Network"
+                    "description": "Mobile Money network to charge. Must match `currency`. Bank and stablecoin networks are refused (`422`): declare those deposits with [Declare a deposit](/api-reference/deposits/create).",
+                    "$ref": "#/components/schemas/MobileMoneyNetwork"
                   },
                   "customer": {
                     "type": "object",
@@ -8688,6 +10123,49 @@
           "TRON"
         ],
         "description": "Payment network. See [Networks & currencies](/networks) for countries and limits."
+      },
+      "MobileMoneyNetwork": {
+        "type": "string",
+        "enum": [
+          "MTN_BJ",
+          "MTN_CI",
+          "MTN_CM",
+          "ORANGE_CI",
+          "ORANGE_SN",
+          "ORANGE_ML",
+          "ORANGE_BF",
+          "ORANGE_CM",
+          "MOOV_BJ",
+          "MOOV_TG",
+          "MOOV_CI",
+          "MOOV_BF",
+          "WAVE_CI",
+          "WAVE_SN",
+          "FREE_SN",
+          "TMONEY_TG",
+          "MOBICASH_ML",
+          "DJAMO_CI",
+          "MIXX_SN",
+          "MTN_CG",
+          "AIRTEL_CG",
+          "ORANGE_CD",
+          "AIRTEL_CD",
+          "VODACOM_CD",
+          "AFRICELL_CD",
+          "AIRTEL_GA",
+          "MOOV_GA",
+          "AIRTEL_TD",
+          "MOOV_TD",
+          "MUNI_GQ",
+          "ORANGE_CF",
+          "MOMO_NG",
+          "AIRTEL_NG",
+          "OPAY_NG",
+          "MTN_GH",
+          "VODAFONE_GH",
+          "AIRTELTIGO_GH"
+        ],
+        "description": "Mobile Money network. Payins only accept these; bank and stablecoin deposits are [declared separately](/deposits)."
       },
       "TransactionStatus": {
         "type": "string",
