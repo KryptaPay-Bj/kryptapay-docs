@@ -37,6 +37,7 @@
             "group": "Guides",
             "pages": [
               "payins",
+              "deposits",
               "payouts",
               "beneficiaries",
               "testing"
@@ -67,6 +68,17 @@
               "api-reference/payins/confirm-otp",
               "api-reference/payins/get",
               "api-reference/payins/create-checkout"
+            ]
+          },
+          {
+            "group": "Deposits",
+            "pages": [
+              "api-reference/deposits/bank-accounts",
+              "api-reference/deposits/stablecoin-address",
+              "api-reference/deposits/create",
+              "api-reference/deposits/attach-proof",
+              "api-reference/deposits/get",
+              "api-reference/deposits/list"
             ]
           },
           {
@@ -174,7 +186,6 @@
     { "source": "/using-the-api", "destination": "/quickstart" },
     { "source": "/core-concepts", "destination": "/" },
     { "source": "/providers", "destination": "/networks" },
-    { "source": "/deposits", "destination": "/payins" },
     { "source": "/api-reference", "destination": "/api-reference/introduction" }
   ],
   "footer": {

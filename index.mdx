@@ -11,8 +11,11 @@ KryptaPay is the B2B payment infrastructure connecting Africa and the rest of th
   <Card title="Collect payments" icon="inbox-arrow-down" href="/payins">
     Charge your customers' Mobile Money wallets directly.
   </Card>
+  <Card title="Fund your wallets" icon="building-columns" href="/deposits">
+    Deposit by bank transfer or stablecoin, credited after review.
+  </Card>
   <Card title="Send payouts" icon="inbox-arrow-up" href="/payouts">
-    Pay suppliers, staff and customers on Mobile Money, bank accounts or crypto addresses.
+    Pay suppliers, staff and customers on Mobile Money, bank accounts or stablecoin addresses.
   </Card>
   <Card title="Convert currencies" icon="arrows-rotate" href="/api-reference/fx/quote">
     Quote and convert between your fiat and stablecoin wallets in real time.
@@ -25,7 +28,8 @@ KryptaPay is the B2B payment infrastructure connecting Africa and the rest of th
 ## How it fits together
 
 - **Wallets** hold your balance, one per currency. Payins credit them, payouts and fees debit them.
-- **Payins** collect money from a customer into a wallet.
+- **Payins** collect money from a customer's Mobile Money wallet into a wallet.
+- **Deposits** fund a wallet by bank transfer or stablecoin, credited once KryptaPay has reviewed them.
 - **Payouts** send money from a wallet to a recipient.
 - **Conversions** move value between two of your wallets in different currencies.
 - **Transactions** are the unified history of all of the above.

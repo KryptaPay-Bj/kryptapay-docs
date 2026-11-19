@@ -26,7 +26,8 @@ export const servers = [
 // Display order of the API Reference sidebar.
 export const tags = [
   { name: 'Payins', description: 'Collect money from your customers\' Mobile Money wallets.' },
-  { name: 'Payouts', description: 'Send money to Mobile Money wallets, bank accounts and crypto addresses.' },
+  { name: 'Deposits', description: 'Fund your wallets by bank transfer or stablecoin. KryptaPay reviews each deposit before crediting it.' },
+  { name: 'Payouts', description: 'Send money to Mobile Money wallets, bank accounts and stablecoin addresses.' },
   { name: 'Beneficiaries', description: 'People and companies you pay, with their payment accounts and identity verification.' },
   { name: 'Fees', description: 'Know the exact fee before you move money.' },
   { name: 'FX', description: 'Exchange rates, quotes and conversions between your wallets.' },
@@ -92,6 +93,18 @@ const BENEFICIARY_FIELDS = {
   'response:verificationRequiredAt': 'When set, the beneficiary\'s EUR / USD bank accounts can only be paid once `verification` is `APPROVED` with `tosAccepted: true`.',
   'response:verification': 'Identity verification for EUR / USD bank accounts. `null` until a verification link is sent.',
 }
+// Beneficiary account input: publish only the current names. The api still
+// accepts the former kind `CRYPTO` and field `cryptoAsset`, undocumented.
+const BENEFICIARY_ACCOUNT_INPUT = {
+  dropRequest: ['cryptoAsset'],
+  enumOnly: { 'request:accounts.kind': ['BANK', 'MOMO', 'STABLECOIN'] },
+}
+const BENEFICIARY_ACCOUNT_FIELDS = {
+  'request:accounts.kind': '`BANK`, `MOMO` (mobile money) or `STABLECOIN`.',
+  'request:accounts.walletChain': '`STABLECOIN`: network of the address (`ETH`, `POLYGON` or `TRON`).',
+  'request:accounts.walletAddress': '`STABLECOIN`: recipient address on that network.',
+  'request:accounts.stablecoinAsset': '`STABLECOIN`: `USDC` or `USDT`.',
+}
 // Same descriptions for a list page, whose beneficiaries sit in `data.items`.
 const BENEFICIARY_LIST_FIELDS = Object.fromEntries(
   Object.entries(BENEFICIARY_FIELDS).map(([k, v]) => [k.replace('response:', 'response:items.'), v]),
@@ -101,6 +114,7 @@ const BENEFICIARY_LIST_FIELDS = Object.fromEntries(
 export const sharedEnums = {
   Currency: { from: 'POST /v1/payouts/', at: 'request:currency', description: 'ISO currency code (fiat) or stablecoin ticker.' },
   Network: { from: 'POST /v1/payouts/', at: 'request:network', description: 'Payment network. See [Networks & currencies](/networks) for countries and limits.' },
+  MobileMoneyNetwork: { from: 'POST /v1/payins/', at: 'request:network', description: 'Mobile Money network. Payins only accept these; bank and stablecoin deposits are [declared separately](/deposits).' },
   TransactionStatus: { from: 'GET /v1/payins/{reference}', at: 'response:status', description: 'Lifecycle status. `COMPLETED`, `FAILED`, `CANCELLED` and `REFUNDED` are final.' },
 }
 
@@ -171,6 +185,25 @@ const transactionExample = {
   failureReason: null,
 }
 
+const depositExample = {
+  id: 'cmdep4k2x0000s60fq7w8e9r1',
+  reference: 'dep_7Hk2LmP9qRsT4uVwXy',
+  ticketRef: 'DEP-2026-11-7K3F9A',
+  channel: 'BANK',
+  currency: 'XOF',
+  declaredAmount: '2500000',
+  status: 'PENDING',
+  bankName: 'Ecobank Bénin',
+  payerName: 'Awa Koné SARL',
+  network: null,
+  txHash: null,
+  hasProof: true,
+  confirmedAmount: null,
+  decisionNote: null,
+  reviewedAt: null,
+  createdAt: '2026-11-19T09:30:00.000Z',
+}
+
 /**
  * Public operations, keyed "METHOD /internal/path" exactly as in the internal spec.
  *  - auth:       'apiKey' (default) or 'none'
@@ -181,6 +214,8 @@ const transactionExample = {
  *  - required: { 'request' | 'request:a.b': [...] } fields to mark required (added to the internal list)
  *  - dropParams / dropResponse: query params / response fields to hide
  *  - deprecated: true marks the operation deprecated in the published spec
+ *  - dropRequest: request-body fields to hide (dashboard-only for this operation)
+ *  - enumOnly:   { 'request:a.b' | 'param:name': [...] } narrow an enum to the values integrators send
  */
 export const operations = {
   // ── Payins ────────────────────────────────────────────────────────────
@@ -204,7 +239,7 @@ export const operations = {
     required: { 'request': ['network'], 'request:customer': ['msisdn'] },
     fields: {
       'request:customer.msisdn': `${MSISDN_DESC} The wallet that will be charged.`,
-      'request:network': 'Mobile Money network to charge. Must match `currency`.',
+      'request:network': 'Mobile Money network to charge. Must match `currency`. Bank and stablecoin networks are refused (`422`): declare those deposits with [Declare a deposit](/api-reference/deposits/create).',
       'request:redirectUrl': 'Where the operator sends the customer back after an operator redirect (`checkoutUrl`).',
       'request:expiresInSec': 'How long the customer has to approve the payment, in seconds (60 to 86400).',
       'response:checkoutUrl': 'Operator page to redirect the customer to, for operators that need it. `null` when the customer approves on their phone.',
@@ -275,6 +310,133 @@ export const operations = {
     },
   },
 
+  // ── Deposits (bank transfer, stablecoin) ─────────────────────────────
+  'GET /v1/collect-accounts/': {
+    tag: 'Deposits',
+    operationId: 'listDepositBankAccounts',
+    summary: 'List KryptaPay bank accounts',
+    description: 'KryptaPay bank accounts you can wire money to, with the details to put on the transfer. Then [declare the deposit](/api-reference/deposits/create) with channel `BANK`. An empty list means no account is open in that country yet: contact support.',
+    fields: {
+      'param:country': 'ISO 3166-1 alpha-2 country code of the account (e.g. `BJ`, `CI`, `NG`). Omit to list every country.',
+      'response:items.notes': 'Instructions to follow for the transfer (e.g. reference to put in the wire).',
+    },
+    responseExample: {
+      ok: true,
+      data: {
+        items: [{
+          // Placeholder values: never copy them, always read the live response.
+          id: 'cmcol8x2k0000s60f1a2b3c4d', country: 'BJ', currency: 'XOF',
+          bankName: 'Example Bank', beneficiaryName: 'KryptaPay',
+          iban: 'BJ00EXAMPLE0000000000000000', bic: 'EXAMPLEXXX',
+          accountNumber: null, routingNumber: null, swift: 'EXAMPLEXXX',
+          notes: 'Put your KryptaPay ticket reference in the transfer label.',
+        }],
+      },
+    },
+  },
+  'GET /v1/deposits/stablecoin-address': {
+    tag: 'Deposits',
+    operationId: 'getStablecoinDepositAddress',
+    summary: 'Get the stablecoin deposit address',
+    description: 'KryptaPay address to send a stablecoin deposit to, for one asset on one network. Send **only** that asset on that network, then [declare the deposit](/api-reference/deposits/create) with channel `STABLECOIN` and the transaction hash. `404 no_address` when no address is open for that pair.',
+    errors: [404],
+    fields: {
+      'param:asset': 'Stablecoin to send.',
+      'param:network': 'Network to send it on.',
+    },
+    responseExample: {
+      ok: true,
+      // Placeholder address: never send funds to it, always read the live response.
+      data: { asset: 'USDT', network: 'TRON', address: 'TEXAMPLEADDRESSxxxxxxxxxxxxxxxxxx', label: 'KryptaPay USDT TRON' },
+    },
+  },
+  'POST /v1/deposits/': {
+    tag: 'Deposits',
+    operationId: 'createDeposit',
+    summary: 'Declare a deposit',
+    description: [
+      'Declares money you sent to KryptaPay **outside** the API, so it can be credited to your wallet in `currency`:',
+      '',
+      '- **Bank transfer** (`BANK`): wire to an account from [List KryptaPay bank accounts](/api-reference/deposits/bank-accounts), then declare it with the transfer receipt in `proof`.',
+      '- **Stablecoin** (`STABLECOIN`): send USDC or USDT to the address from [Get the stablecoin deposit address](/api-reference/deposits/stablecoin-address), then declare it with `network` and `txHash`.',
+      '',
+      'Every deposit is **reviewed by KryptaPay** before your wallet is credited: it starts `PENDING`, then becomes `APPROVED` (wallet credited with `confirmedAmount`) or `REJECTED`. No webhook is sent: poll [Get a deposit](/api-reference/deposits/get).',
+      '',
+      'Mobile Money collections are not declared here: use [Create a payin](/api-reference/payins/create).',
+    ].join('\n'),
+    scope: 'payins:write',
+    errors: [409, 422],
+    dropRequest: ['payerPhone', 'payerCountry'],
+    enumOnly: { 'request:channel': ['BANK', 'STABLECOIN'], 'request:network': ['ETH', 'POLYGON', 'TRON'] },
+    fields: {
+      'request:channel': '`BANK` for a bank transfer, `STABLECOIN` for a USDC / USDT transfer.',
+      'request:currency': 'Wallet to credit. For `STABLECOIN`, the asset you sent (`USDC` or `USDT`).',
+      'request:declaredAmount': 'Amount you sent, as a decimal string. KryptaPay credits the amount actually received (`confirmedAmount`).',
+      'request:bankName': '`BANK`: bank the transfer was sent from.',
+      'request:payerName': '`BANK`: name of the account holder who sent the transfer.',
+      'request:network': '`STABLECOIN`: network the transfer was sent on.',
+      'request:txHash': '`STABLECOIN`: transaction hash. Replaces `proof` for stablecoin deposits.',
+      'request:proof': 'Proof of the transfer (bank receipt, statement extract…), base64-encoded. Required for `BANK`. PDF, JPEG, PNG or WebP; the whole request must stay under 15 MB.',
+    },
+    dropResponse: ['payerPhone', 'expiresAt', 'payerCountry', 'feeBps', 'feeAmount', 'creditedAmount'],
+    requestExample: {
+      channel: 'BANK',
+      currency: 'XOF',
+      declaredAmount: '2500000',
+      bankName: 'Ecobank Bénin',
+      payerName: 'Awa Koné SARL',
+      proof: { filename: 'wire-receipt.pdf', mimeType: 'application/pdf', base64: 'JVBERi0xLjcKJc...' },
+    },
+    responseExample: { ok: true, data: depositExample },
+  },
+  'GET /v1/deposits/': {
+    tag: 'Deposits',
+    operationId: 'listDeposits',
+    summary: 'List deposits',
+    description: 'Your declared deposits, most recent first. Pass `nextCursor` as `cursor` to get the next page.',
+    dropResponse: ['payerPhone', 'expiresAt', 'payerCountry', 'feeBps', 'feeAmount', 'creditedAmount'],
+    responseExample: {
+      ok: true,
+      data: {
+        items: [
+          {
+            ...depositExample, id: 'cmdep9t1z0000s60fa1b2c3d4', reference: 'dep_Qw3Er5Ty7Ui9Op1As2', ticketRef: 'DEP-2026-11-9QW3ER',
+            channel: 'STABLECOIN', currency: 'USDT', declaredAmount: '1500', bankName: null, payerName: null,
+            network: 'TRON', txHash: '9f2c1e7a4b3d8f6e5a2c1b0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f', hasProof: false,
+            status: 'APPROVED', confirmedAmount: '1500', reviewedAt: '2026-11-19T11:02:00.000Z', createdAt: '2026-11-19T10:41:00.000Z',
+          },
+          depositExample,
+        ],
+        nextCursor: null,
+      },
+    },
+  },
+  'GET /v1/deposits/{id}': {
+    tag: 'Deposits',
+    operationId: 'getDeposit',
+    summary: 'Get a deposit',
+    description: 'One deposit, by `id`, `reference` (`dep_…`) or `ticketRef` (`DEP-…`). Poll it to know when KryptaPay has reviewed it.',
+    errors: [404],
+    fields: { 'param:id': 'Deposit id, `reference` or `ticketRef`.' },
+    dropResponse: ['payerPhone', 'expiresAt', 'payerCountry', 'feeBps', 'feeAmount', 'creditedAmount'],
+    responseExample: {
+      ok: true,
+      data: { ...depositExample, status: 'APPROVED', confirmedAmount: '2500000', reviewedAt: '2026-11-19T14:12:00.000Z' },
+    },
+  },
+  'POST /v1/deposits/{id}/proof': {
+    tag: 'Deposits',
+    operationId: 'attachDepositProof',
+    summary: 'Attach a proof to a deposit',
+    description: 'Adds or replaces the proof of a deposit that is still `PENDING`. `409 bad_status` once KryptaPay has reviewed it.',
+    scope: 'payins:write',
+    errors: [404, 409, 422],
+    fields: { 'param:id': 'Deposit id, `reference` or `ticketRef`.' },
+    dropResponse: ['payerPhone', 'expiresAt', 'payerCountry', 'feeBps', 'feeAmount', 'creditedAmount'],
+    requestExample: { proof: { filename: 'statement-extract.png', mimeType: 'image/png', base64: 'iVBORw0KGgo...' } },
+    responseExample: { ok: true, data: depositExample },
+  },
+
   // ── Payouts ───────────────────────────────────────────────────────────
   'POST /v1/payouts/': {
     tag: 'Payouts',
@@ -283,6 +445,9 @@ export const operations = {
     description: [
       'Sends money from your wallet in `currency` to a recipient. The amount plus fee is reserved immediately.',
       '',
+      '- **Mobile Money** payouts are usually executed straight away.',
+      '- **Bank** (`BANK_*`) and **stablecoin** (`ETH`, `POLYGON`, `TRON`) payouts are always reviewed by KryptaPay before being sent: they stay `PENDING` until then.',
+      '',
       'Always send an `Idempotency-Key`: retrying with the same key returns the original payout instead of paying twice.',
       'Listen for the `PAYOUT_COMPLETED` / `PAYOUT_FAILED` webhooks for the final result.',
     ].join('\n'),
@@ -290,7 +455,7 @@ export const operations = {
     idempotent: true,
     errors: [409, 422],
     fields: {
-      'request:recipient': 'Which fields are required depends on `network`: mobile money networks require msisdn; BANK_NGN requires accountNumber and bankCode; crypto networks (ETH/POLYGON/TRON) require address; BANK_EUR and BANK_USD require the iban (or accountNumber) saved on the beneficiary given in `counterpartyId`. The other bank rails (BANK_XOF, BANK_XAF, BANK_GHS, BANK_CDF) are settled manually by KryptaPay today, so at least one recipient identifier is required but no specific field is enforced yet.',
+      'request:recipient': 'Which fields are required depends on `network`: mobile money networks require msisdn; BANK_NGN requires accountNumber and bankCode; stablecoin networks (ETH/POLYGON/TRON) require address; BANK_EUR and BANK_USD require the iban (or accountNumber) saved on the beneficiary given in `counterpartyId`. The other bank rails (BANK_XOF, BANK_XAF, BANK_GHS, BANK_CDF) are settled manually by KryptaPay today, so at least one recipient identifier is required but no specific field is enforced yet.',
       'request:counterpartyId': 'Id of a saved [beneficiary](/beneficiaries) to pay. Required for BANK_EUR and BANK_USD. The beneficiary must be approved, not blacklisted and, for EUR / USD bank payouts, verified.',
       'request:recipient.msisdn': `${MSISDN_DESC} Required for mobile money networks.`,
       'request:recipient.bankName': 'Informational only today — no payment provider reads this field. Kept for display / forward-compatibility.',
@@ -354,8 +519,10 @@ export const operations = {
     ].join('\n'),
     scope: 'payouts:write',
     errors: [422],
+    ...BENEFICIARY_ACCOUNT_INPUT,
     fields: {
       ...BENEFICIARY_FIELDS,
+      ...BENEFICIARY_ACCOUNT_FIELDS,
       'request:entityType': '`INDIVIDUAL` or `BUSINESS` (default). Cannot be changed later.',
       'request:email': 'Required when the beneficiary has an `EUR` or `USD` bank account: the verification link is sent there. An email already used to verify the other entity type is refused (`422 email_used_by_other_entity_type`).',
       'request:accounts': 'At most one account per `kind` and `currency`.',
@@ -395,7 +562,8 @@ export const operations = {
     ].join('\n'),
     scope: 'payouts:write',
     errors: [404, 422],
-    fields: { ...BENEFICIARY_FIELDS, 'param:id': 'Beneficiary id.' },
+    ...BENEFICIARY_ACCOUNT_INPUT,
+    fields: { ...BENEFICIARY_FIELDS, ...BENEFICIARY_ACCOUNT_FIELDS, 'param:id': 'Beneficiary id.' },
     dropResponse: BENEFICIARY_DROP,
     requestExample: { email: 'j.dupont@example.com' },
     responseExample: { ok: true, data: { ...beneficiaryExample, email: 'j.dupont@example.com' } },
@@ -509,10 +677,11 @@ export const operations = {
     description: 'Every payin, payout, conversion, transfer, fee and refund on your account, most recent first. Paginate with `cursor` / `nextCursor`.',
     fields: {
       'param:q': 'Free-text search on reference and description.',
-      'param:rail': 'Filter by rail: mobile money, bank or crypto.',
+      'param:rail': 'Filter by rail: `momo` (mobile money), `bank` or `stablecoin`.',
       'param:from': 'Only transactions created at or after this date.',
       'param:to': 'Only transactions created before this date.',
     },
+    enumOnly: { 'param:rail': ['momo', 'bank', 'stablecoin'] },
     dropParams: ['page', 'pageSize'],
     dropResponse: ['total', 'page', 'totalPages'],
     responseExample: { ok: true, data: { items: [transactionExample], nextCursor: 'cmgx2k1qv0000s60fzz9y8x7w' } },

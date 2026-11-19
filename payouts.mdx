@@ -1,9 +1,15 @@
 ---
 title: "Send payouts"
-description: "Pay recipients on Mobile Money, bank accounts and crypto addresses."
+description: "Pay recipients on Mobile Money, bank accounts and stablecoin addresses."
 ---
 
 A **payout** sends money from your wallet to a recipient. The amount plus fee is reserved from your wallet as soon as the payout is created, and released if it fails or is cancelled.
+
+| Payout type | Networks | When it is sent |
+| --- | --- | --- |
+| **Mobile Money** | e.g. `MTN_BJ`, `ORANGE_CI`, `WAVE_SN` | Usually straight away. |
+| **Bank** | `BANK_XOF`, `BANK_XAF`, `BANK_NGN`, `BANK_GHS`, `BANK_CDF`, `BANK_EUR`, `BANK_USD` | After a manual review by KryptaPay. |
+| **Stablecoin** | `ETH`, `POLYGON`, `TRON` (USDC, USDT) | After a manual review by KryptaPay. |
 
 ## 1. Check the fee (optional)
 
@@ -60,7 +66,7 @@ A `201` means the payout was **accepted**, not that the recipient has the money 
 | --- | --- | --- |
 | Mobile Money (e.g. `MTN_BJ`) | `msisdn` | `97000000`, `22997000000` or `+22997000000` |
 | `BANK_NGN` | `accountNumber` + `bankCode` | NUBAN `0123456789`, bank code `044` |
-| Crypto (`ETH`, `POLYGON`, `TRON`) | `address` | Wallet address on that chain |
+| Stablecoin (`ETH`, `POLYGON`, `TRON`) | `address` | Recipient address on that network |
 | `BANK_EUR`, `BANK_USD` | `counterpartyId` + the beneficiary's saved `iban` or `accountNumber` | See [Bank payouts in EUR and USD](#bank-payouts-in-eur-and-usd) |
 | Other bank rails (`BANK_XOF`, `BANK_XAF`, `BANK_GHS`, `BANK_CDF`) | At least one identifier, e.g. `iban` | Settled manually by KryptaPay today |
 
@@ -145,9 +151,9 @@ You can also fetch it any time with [Get a payout](/api-reference/payouts/get), 
 
 ## Reviews and holds
 
-Most payouts are executed automatically (`autoExecuted: true`). Some stay `PENDING` for a while:
+Mobile Money payouts are usually executed automatically (`autoExecuted: true`). Some payouts stay `PENDING` for a while:
 
-- **Manual approval** — depending on amount and account settings, some payouts are reviewed by KryptaPay before being sent.
+- **Manual approval** — **bank and stablecoin payouts are always reviewed** by KryptaPay before being sent. Mobile Money payouts can be too, depending on amount and account settings.
 - **Compliance hold** — `frozen: true` means the payout is under compliance review. Don't resubmit it; it continues or is cancelled once reviewed. Contact support if it lasts.
 
 A payout that is still `PENDING` can be cancelled with [Cancel a payout](/api-reference/payouts/cancel), which releases the reserved funds. Once `PROCESSING`, it can no longer be cancelled (`409 bad_status`).
