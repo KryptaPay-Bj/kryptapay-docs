@@ -1,9 +1,9 @@
 ---
-title: "Bank and stablecoin deposits"
-description: "Fund your wallets by bank transfer or stablecoin. KryptaPay reviews each deposit before crediting it."
+title: "Deposits: bank, stablecoin and GIMAC"
+description: "Fund your wallets by bank transfer, stablecoin or GIMAC. KryptaPay reviews each deposit before crediting it."
 ---
 
-A **deposit** funds one of your wallets with money you send to KryptaPay yourself, outside the API: a **bank transfer** or a **stablecoin** transfer (USDC, USDT). You then declare it, and KryptaPay credits your wallet **after checking that the money arrived**.
+A **deposit** funds one of your wallets with money sent to KryptaPay outside the API: a **bank transfer**, a **stablecoin** transfer (USDC, USDT) or a **GIMAC** payment in the CEMAC zone. You declare it, and KryptaPay credits your wallet **after checking that the money arrived**.
 
 <Info>
   Collecting from a customer's Mobile Money wallet is a [payin](/payins), not a deposit. Payins only accept Mobile Money networks: a bank or stablecoin network there returns `422`.
@@ -82,6 +82,64 @@ curl https://staging.api.krypta-pay.com/v1/deposits \
 
 `currency` is the asset you sent: the deposit credits your `USDC` or `USDT` wallet.
 
+## GIMAC
+
+GIMAC lets a payer pay from a bank or mobile money account connected to GIMAC in the CEMAC zone (Cameroon, Congo, Gabon, Chad, Central African Republic, Equatorial Guinea), by scanning the KryptaPay QR code or entering its merchant code. The payer can be you, or one of your customers. GIMAC deposits are in `XAF` only.
+
+Unlike a bank or stablecoin deposit, you declare a GIMAC deposit **before** the payment.
+
+### 1. Check that GIMAC is available
+
+```bash
+curl https://staging.api.krypta-pay.com/v1/deposits/gimac \
+  -H "Authorization: Bearer $KRYPTAPAY_API_KEY"
+```
+
+Offer GIMAC only when `available` is `true`. The response also gives the `merchantName` and `merchantCode`, whether a QR code exists (`hasQr`), and the entry fee of each country in `fees` (basis points: `200` = 2 %). See [Get the GIMAC payment details](/api-reference/deposits/gimac).
+
+### 2. Declare the deposit
+
+Ask the payer for the country of the account they pay from: it sets the entry fee.
+
+```bash
+curl https://staging.api.krypta-pay.com/v1/deposits \
+  -H "Authorization: Bearer $KRYPTAPAY_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel": "GIMAC",
+    "currency": "XAF",
+    "declaredAmount": "50000",
+    "payerCountry": "CM",
+    "payerName": "Paul Mbarga"
+  }'
+```
+
+The deposit is `PENDING`, with a `ticketRef` (`DEP-…`), the fee rate frozen in `feeBps`, and an indicative deadline in `expiresAt` (30 minutes). No proof is needed.
+
+### 3. Show the payer what to pay
+
+Show the payer, together:
+
+- the QR code, from [Get the GIMAC QR code](/api-reference/deposits/gimac-qr) (an image), or the `merchantCode` when there is no QR code;
+- the **exact** amount (`declaredAmount`);
+- the `ticketRef`, to put in the **payment description**.
+
+```bash
+curl https://staging.api.krypta-pay.com/v1/deposits/gimac/qr \
+  -H "Authorization: Bearer $KRYPTAPAY_API_KEY" \
+  --output gimac-qr.png
+```
+
+Fetch the image from your server: your API key must never reach the payer's browser.
+
+<Warning>
+  Without the `ticketRef` in the payment description, KryptaPay cannot match the payment to the deposit quickly.
+</Warning>
+
+### 4. Get the result
+
+KryptaPay matches the payment on the GIMAC statement, then approves the deposit. The entry fee of the payer's country is deducted: `confirmedAmount` is the amount received, `feeAmount` the fee, and `creditedAmount` what reaches your wallet. A payment that arrives after `expiresAt` can still be approved.
+
 ## Review and crediting
 
 Every deposit is **reviewed by KryptaPay** before your wallet is credited:
@@ -89,23 +147,25 @@ Every deposit is **reviewed by KryptaPay** before your wallet is credited:
 | `status` | Meaning |
 | --- | --- |
 | `PENDING` | Declared, waiting for KryptaPay to confirm the money arrived. |
-| `APPROVED` | Confirmed: your wallet is credited with `confirmedAmount`, the amount actually received. It also appears in your [transactions](/api-reference/transactions/list). |
+| `APPROVED` | Confirmed: your wallet is credited with `confirmedAmount`, the amount actually received (for `GIMAC`, `creditedAmount`, after the entry fee). It also appears in your [transactions](/api-reference/transactions/list). |
 | `REJECTED` | Not credited. `decisionNote` explains why. |
 
-No webhook is sent for deposits. Poll [Get a deposit](/api-reference/deposits/get) with its `id`, `reference` or `ticketRef`, or [list your deposits](/api-reference/deposits/list).
+When KryptaPay has reviewed a deposit, you receive the `DEPOSIT_APPROVED` or `DEPOSIT_REJECTED` [webhook](/webhooks#supported-events): subscribe your endpoint to them. You can also poll [Get a deposit](/api-reference/deposits/get) with its `id`, `reference` or `ticketRef`, or [list your deposits](/api-reference/deposits/list).
 
 `confirmedAmount` can be lower than `declaredAmount` when banks or the network took fees on the way.
 
 ## In sandbox
 
-The sandbox accepts deposit declarations so you can test your integration, but no money moves: a sandbox deposit stays `PENDING` unless you ask support to approve or reject it to test how you handle the result. A sandbox key is refused on the production API (`403 env_mismatch`).
+The sandbox accepts deposit declarations so you can test your integration, but no money moves: a sandbox deposit stays `PENDING` unless you ask support to approve or reject it, to test how you handle the result and the webhooks. Sandbox deposits notify your sandbox webhook endpoints only. A sandbox key is refused on the production API (`403 env_mismatch`).
 
 ## Common errors
 
 | Code | Status | Meaning |
 | --- | --- | --- |
-| `validation_error` | 422 | A required field is missing, e.g. `proof` for a bank transfer, or `txHash` for a stablecoin transfer. |
+| `validation_error` | 422 | A required field is missing or wrong, e.g. `proof` for a bank transfer, `txHash` for a stablecoin transfer, `payerCountry` or a currency other than `XAF` for GIMAC. |
+| `gimac_unavailable` | 409 | GIMAC deposits are temporarily unavailable. Check `available` in [Get the GIMAC payment details](/api-reference/deposits/gimac). |
 | `too_large`, `mime_not_allowed` | 422 | The proof file is too big or not an accepted type. |
 | `bad_status` | 409 | You tried to attach a proof to a deposit KryptaPay has already reviewed. |
 | `no_address` | 404 | No stablecoin address is open for that asset and network. |
+| `not_found` (QR code) | 404 | No GIMAC QR code is set: show the `merchantCode` instead. |
 | `not_found` | 404 | No deposit with that id, `reference` or `ticketRef` on your account. |
