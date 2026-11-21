@@ -43,6 +43,20 @@ Create keys in the dashboard under **Developers → API keys**. For each key you
 
 The secret is displayed **once**. KryptaPay stores only a hash, so a lost key cannot be recovered — revoke it and create a new one.
 
+### Who can create keys
+
+Your role in the organization decides which keys you can create and revoke:
+
+| Role | Sandbox keys | Live keys |
+| --- | --- | --- |
+| Owner, Admin | Yes | Yes |
+| Developer | Yes, any scope except `*` | No |
+| Finance, Operator, Read-only | No | No |
+
+The same rules apply to [webhook endpoints](/webhooks).
+
+A key never does more than the member who created it is allowed to do. On live keys, that is exactly the member's role: only the Owner can create a live key that makes payins or payouts. If that member leaves the organization or loses the right, the key's calls fail with `403` and `error.code: "api_key_owner_not_allowed"`. Create a new key from a member who has the right.
+
 ## Scopes
 
 Give each integration the smallest set of scopes it needs. Any valid key can read data; scopes control actions that move money.
