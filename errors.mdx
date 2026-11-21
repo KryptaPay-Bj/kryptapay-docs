@@ -26,7 +26,7 @@ Every error uses the same envelope. Branch on `error.code` — it is stable. `er
 | `200` / `201` | Success / resource created | — |
 | `400` | Malformed request, e.g. invalid JSON | No — fix the request |
 | `401` | Missing, invalid or expired API key | No — check the key |
-| `403` | Key lacks a scope, or the account isn't KYB-approved | No |
+| `403` | Key lacks a scope, its creator isn't allowed the action, or the account isn't KYB-approved | No |
 | `404` | Resource not found | No |
 | `409` | Conflict: wrong state for the action, or a duplicate payout | No |
 | `413` | Request body larger than 1 MB | No |
@@ -60,6 +60,7 @@ A body that fails validation (missing or invalid field, wrong type, unmet cross-
 | --- | --- | --- | --- |
 | `unauthorized` | 401 | The API key is missing, invalid, revoked or expired. | Check the key and environment. |
 | `insufficient_scope` | 403 | The key doesn't have the scope this action needs. | Use a key with the right [scope](/authentication#scopes). |
+| `api_key_owner_not_allowed` | 403 | The member who created the key left the organization, or their role no longer allows this action. | Create a new key from an authorized member — see [Who can create keys](/authentication#who-can-create-keys). |
 | `kyb_required` | 403 | The organization isn't KYB-approved, or is suspended or closed. | Complete KYB, or contact support. |
 | `not_found` | 404 | The resource doesn't exist or belongs to another account. | Check the id or reference. |
 | `bad_status` | 409 (422 on confirm-otp) | The resource can't change state, e.g. cancelling a payout that is already processing. | Fetch it to see its current status. |
