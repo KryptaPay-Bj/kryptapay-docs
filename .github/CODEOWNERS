@@ -1,0 +1,18 @@
+# Code owners — kryptapay-docs (public repo)
+#
+# Any PR that touches a path below automatically requests a review from its
+# owner. With the "Require review from Code Owners" branch rule, the PR
+# cannot be merged without that approval.
+# Syntax: https://docs.github.com/articles/about-code-owners
+
+# --- Site config, dependencies, scripts ---
+/.github/                         @cedrickah
+/docs.json                        @cedrickah
+/package.json                     @cedrickah
+/scripts/                         @cedrickah
+
+# --- Public API contract and commitments (compliance, go-live) ---
+/openapi.json                     @cedrickah
+/api-reference/                   @cedrickah
+/compliance.mdx                   @cedrickah
+/going-live.mdx                   @cedrickah
