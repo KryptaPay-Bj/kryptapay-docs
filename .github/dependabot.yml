@@ -1,0 +1,22 @@
+# Dependabot : correctifs de securite seulement, regroupes.
+#
+# - open-pull-requests-limit: 0 coupe les PR de mise a jour de version
+#   courantes ; les correctifs de securite (alertes du depot) restent actifs.
+# - Les correctifs mineurs et patchs sont regroupes en une seule PR par depot ;
+#   les versions majeures restent des PR separees (souvent du code a adapter :
+#   les traiter comme une montee de version planifiee, pas un merge direct).
+# - Les PR visent la branche par defaut du depot.
+#
+# Syntaxe : https://docs.github.com/code-security/dependabot/working-with-dependabot/dependabot-options-reference
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    groups:
+      securite-mineures-patchs:
+        applies-to: security-updates
+        patterns: ["*"]
+        update-types: [minor, patch]
