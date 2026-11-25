@@ -1,0 +1,14 @@
+# Chaque PR est liee a une carte Trello ou a une issue (regles et exceptions :
+# scripts/check-ticket.sh de KryptaPay-Bj/.github).
+name: Ticket
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize, labeled, unlabeled]
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+jobs:
+  ticket:
+    name: Ticket
+    uses: KryptaPay-Bj/.github/.github/workflows/pr-ticket.yml@main
